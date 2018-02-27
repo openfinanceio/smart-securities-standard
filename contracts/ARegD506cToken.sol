@@ -8,7 +8,7 @@ import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 ///
 /// @title A token that tracks data relevant for Reg D 506 c status
-contract TheRegD506cToken is RegD506cToken, RestrictedToken, Ownable {
+contract ARegD506cToken is RegD506cToken, RestrictedToken, Ownable {
 
   ///
   /// Is the token being used to raise capital for a fund?
@@ -21,7 +21,7 @@ contract TheRegD506cToken is RegD506cToken, RestrictedToken, Ownable {
   ///
   /// The contract is initialized to have zero shareholders with the entire
   /// supply under the control of the contract creator
-  function RegD506cToken(uint256 supply, bool isFund_, address restrictor_, address issuer)
+  function ARegD506cToken(uint256 supply, bool isFund_, address restrictor_, address issuer)
     public
   {
     totalSupply_ = supply;
