@@ -2,21 +2,21 @@ pragma solidity ^0.4.17;
 
 
 import './zeppelin-solidity/contracts/token/ERC20/StandardToken.sol';
-import './RuleSet.sol';
+import './TransferRestrictor.sol';
 
 
 ///
 /// @title RestrictedToken is a token with support for flexible rule-checking
 contract RestrictedToken is StandardToken {
 
-  address ruleset;
+  address restrictor;
 
   ///
-  /// @param ruleset_ The address of the contract which specifies the rules
-  function RestrictedToken(address ruleset_)
+  /// @param restrictor_ The address of the contract which specifies the rules
+  function RestrictedToken(address restrictor_)
     public
   {
-    ruleset = ruleset_;
+    restrictor = restrictor_;
   }
 
   ///
@@ -26,17 +26,7 @@ contract RestrictedToken is StandardToken {
     returns (bool)
   {
 
-    bytes32 callHash = keccak256(msg.data);
-
-    // Attach the data
-    RuleSet(ruleset).attachAddress(this, callHash);
-    RuleSet(ruleset).attachAddress(msg.sender, callHash);
-    RuleSet(ruleset).attachAddress(to, callHash);
-    RuleSet(ruleset).attachUint256(balanceOf(msg.sender), callHash);
-    RuleSet(ruleset).attachUint256(value, callHash);
-
-    require(RuleSet(ruleset).test(callHash));
-
+    require(TransferRestrictor(restrictor).test(msg.sender, to, value, this));
     bool res = super.transfer(to, value);
     return res;
 
@@ -49,17 +39,7 @@ contract RestrictedToken is StandardToken {
     returns (bool)
   {
 
-    bytes32 callHash = keccak256(msg.data);
-
-    // Attach the data
-    RuleSet(ruleset).attachAddress(this, callHash);
-    RuleSet(ruleset).attachAddress(from, callHash);
-    RuleSet(ruleset).attachAddress(to, callHash);
-    RuleSet(ruleset).attachUint256(balanceOf(from), callHash);
-    RuleSet(ruleset).attachUint256(value, callHash);
-
-    require(RuleSet(ruleset).test(callHash));
-
+    require(TransferRestrictor(restrictor).test(from, to, value, this));
     bool res = super.transferFrom(from, to, value);
     return res;
 
