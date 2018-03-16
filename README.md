@@ -1,3 +1,5 @@
+OpenFinance S3 - Smart Securities Standard
+==
 ---
 version: 0.1
 ---
