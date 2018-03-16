@@ -20,7 +20,7 @@ contract TheRegS is RegS, Ownable {
   mapping(address => uint256) issuanceDate;
 
       /// Table of residency status checking contracts
-  mapping(address => uint256) residencyChecker;
+  mapping(address => address) residencyChecker;
 
   //
   /// Register a contract to confirm AML-KYC status

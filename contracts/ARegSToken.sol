@@ -1,11 +1,12 @@
 pragma solidity ^0.4.18;
 
 import './RegS.sol';
+import './RegSToken.sol';
 import './RestrictedToken.sol';
 import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 /// @title A token that tracks data relevant for Reg S status;
-contract ARegSToken is RegS, RegSToken, RestrictedToken, Ownable {
+contract ARegSToken is RegSToken, RestrictedToken, Ownable {
 
 
   bool public isInternational = true;
@@ -15,7 +16,7 @@ contract ARegSToken is RegS, RegSToken, RestrictedToken, Ownable {
   uint16 public shareholderCount = 0;
 
 
-  function ARegSToken(uint256 supply, address restrictor_, address issuer)
+  function ARegSToken(uint256 supply, address restrictor_, address issuer, bool isInternational_)
     public
     {
       totalSupply_ = supply;
