@@ -18,44 +18,46 @@ Contract overview 
 
 ### Interfaces
 
-- `TransferRestrictor`is an interface for restricting ERC20 transfers. Contains 
-	a function .test that checks address to, address from, amount, and token 
-	address. Returns a bool
-- `RestrictedToken` is the basis of the Security token standard. This is the 
-	first line in the extension of the StandardToken (ERC20) Open Zeppelin 
-	contract. It adds flexible rule checking. RestrictedToken is passed a 
-	restrictor address, which is then used to test against msg.sender, to, value, 
-	and the token (this). From there, restricted transfers can occur, or 
-	delegated resticted transfers. (transfer && transferFrom)
-- `UserChecker` is an interface that confirms user address and returns a bool
-- `RegD506c` is an implementation of the restrictions set forth via regulation D 
-	exemption 506(c). Inherits Transfer Restrictor. This contracts begins the 
-	holding period of the token, registers AML/KYC, investor accreditation, and 
-	bad actor checks.
-- `RegD506cToken` Returns a bool determining if the token represents the a 
-	fund, which hold different shareholder limits.
+- `TransferRestrictor`:  A contract expressing rules about whether to approve or
+  block an ERC token transfer should implement this interface.  The contract
+  may use the information available at call time (value sender, value receiver,
+  and amount) as well as any additional information exposed through some
+  interface of the calling contract.
+- `UserChecker`:  Contracts which determine whether or not to block an account
+  from doing something should implement this interface. 
+- `RegD506c`:  This interface captures the methods required to configure the
+  contract make a determination about the compliance of a token transfer under
+  regulation D 506(c).  _Note: current implementation allows up to one contract
+  to be designated as an AML/KYC provider for each token.  Similarly for
+  accreditation checkers._ 
+- `RegD506cToken`:  Tokens regulated under regulation D 506(c) should implement
+  this interface, which exposes the current number of shareholders. 
 
 ### Concrete contracts
 
-- `SimpleUserChecker` is an extension of Ownable and UserChecker. Used to 
-	confirm entities via checkers, or registered address allowed to approve said 
-	enitity identities. Add, remove, and confirm Users.
-- `TheRegD506c` holds tables for all AML-KYC, accredited investors, and 
-	Issuance dates for the securities. Enforces All applied Rules, checks AML-KYC 
-	status with the registered checker, confirms accredited investor status with 
-	the associated checker.
-- `ARegD506cToken` implements the `RegD506cToken` interface, which requires 
-	internal tracking of the number of active shareholders.  A given shareholder 
-	may have multiple Ethereum accounts, but in this draft of the standard we 
-	actually restrict the number of accounts that have a positive balance.  
-	_Note: An attacker may be able to DoS the investment community by buying 
-	shares under multiple accounts and exhausting the account allotment._
+- `RestrictedToken`:  This contract extends Open Zeppelin's ERC20
+  `StandardToken` contract, by allowing a `TransferRestrictor` to be configured
+  which is used to enforce some rule set.
+- `SimpleUserChecker`:  This contract implements the `UserChecker` interface.
+  It maintains a configurable list of agents who may confirm users by storing a
+  commitment (presumably a hash digest of a document) to user data.
+- `TheRegD506c`:  This contract implements regulation D 506 (c) rules.  To use
+  this as their `TransferRestrictor`, tokens must configure an AML/KYC provider
+  and an accredited investor status checker for themselves.  
+- `ARegD506cToken`:  This contract implements the `RegD506cToken` interface,
+  which requires internal tracking of the number of active shareholders.  A
+  given shareholder may have multiple Ethereum accounts, but in this draft of
+  the standard we actually restrict the number of accounts that have a positive
+  balance.  _Note: An attacker may be able to DoS the investment community by
+  buying shares under multiple accounts and exhausting the account allotment._
 
 Implemented Regulations
 ==
 
 Reg S
 --
+
+This regulation covers certain securities that can be traded by foreign investors.
 
 RegD 506 (c)
 --
