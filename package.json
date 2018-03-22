@@ -1,6 +1,6 @@
 {
-  "name": "ofn-security-tokens",
-  "version": "0.1.0",
+  "name": "smart-securities-standard",
+  "version": "0.1.1",
   "license": "MIT",
   "scripts": {
     "compile": "ls contracts/*.sol | xargs solc --abi --output build --overwrite"
