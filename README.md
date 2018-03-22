@@ -43,7 +43,9 @@ Contract overview 
   commitment (presumably a hash digest of a document) to user data.
 - `TheRegD506c`:  This contract implements regulation D 506 (c) rules.  To use
   this as their `TransferRestrictor`, tokens must configure an AML/KYC provider
-  and an accredited investor status checker for themselves.  
+  and an accredited investor status checker for themselves.  These contracts
+  must implement `UserChecker`.  Furthermore, the token contract must implement
+  `RegD506cToken`.
 - `ARegD506cToken`:  This contract implements the `RegD506cToken` interface,
   which requires internal tracking of the number of active shareholders.  A
   given shareholder may have multiple Ethereum accounts, but in this draft of
