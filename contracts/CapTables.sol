@@ -21,6 +21,11 @@ contract CapTables is IndexConsumer {
   /** `capTable(security, user) == userBalance` */
   mapping(uint256 => mapping(address => uint256)) public capTable;
 
+  /** @dev retrieve the balance at a given address */
+  function balanceOf(uint256 security, address user) public view returns (uint256) {
+    return capTable[security][user];
+  }
+
   /** @dev Add a security to the contract. */
   function initialize(uint256 supply) public returns (uint256) {
     uint256 index = nextIndex();

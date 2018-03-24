@@ -3,12 +3,12 @@ pragma solidity ^0.4.10;
 
 import './RegD506c.sol';
 import './RegD506cToken.sol';
-import './RestrictedToken.sol';
+import './RestrictedTokenLogic.sol';
 import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 ///
 /// @title A token that tracks data relevant for Reg D 506 c status
-contract ARegD506cToken is RegD506cToken, RestrictedToken, Ownable {
+contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic, Ownable {
 
   ///
   /// Is the token being used to raise capital for a fund?
@@ -21,15 +21,22 @@ contract ARegD506cToken is RegD506cToken, RestrictedToken, Ownable {
   ///
   /// The contract is initialized to have zero shareholders with the entire
   /// supply under the control of the contract creator
-  function ARegD506cToken(uint256 supply, bool isFund_, address restrictor_, address issuer)
+  function ARegD506cToken(
+    uint256 supply, 
+    bool isFund_, 
+    address issuer,
+    address restrictor_,
+    address capTables_ 
+  )
     public
   {
     totalSupply_ = supply;
     isFund = isFund_;
-    restrictor = restrictor_;
     owner = issuer;
 
-    balances[issuer] = supply;
+    restrictor = restrictor_;
+    capTables = capTables_;
+    index = ICapTables(capTables).initialize(supply);
   }
 
   ///

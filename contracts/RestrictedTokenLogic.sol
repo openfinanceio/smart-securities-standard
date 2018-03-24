@@ -1,23 +1,15 @@
 pragma solidity ^0.4.17;
 
 
-import './zeppelin-solidity/contracts/token/ERC20/StandardToken.sol';
+import './StandardTokenLogic.sol';
 import './TransferRestrictor.sol';
 
 
 ///
 /// @title RestrictedToken is a token with support for flexible rule-checking
-contract RestrictedToken is StandardToken {
+contract RestrictedTokenLogic is StandardTokenLogic {
 
   address restrictor;
-
-  ///
-  /// @param restrictor_ The address of the contract which specifies the rules
-  function RestrictedToken(address restrictor_)
-    public
-  {
-    restrictor = restrictor_;
-  }
 
   ///
   /// Simple implementation of restricted transfers
