@@ -5,13 +5,11 @@ version: 0.1.1
 OpenFinance S3 - Smart Securities Standard
 ==
 
-This library contains a series of modular contracts, meant to build off of each 
-other, and fit the needs of specific regulation. You will find all the 
-requirements of a compliant transfer, AML/KYC, investor accreditation, and bad 
-actor checks. Our library will encompass all offerings of registered & 
-restricted securities, including Regulation D, Reg S, Reg A+, & Reg CF. These 
-offerings will allow an issuer to easily and compliantly create a security 
-token capable of utilizing the full benefit of the OFN ecosystem.
+This library contains contracts which reify particular SEC rules and
+exemptions, such as regulations A+, CF, D, and S.  The library architecture
+makes it possible for securities issuers to automate compliance with the SEC
+rules governing their class of securities, and to roll over into other classes
+as and when the rules allow. 
 
 Contract overview 
 --
