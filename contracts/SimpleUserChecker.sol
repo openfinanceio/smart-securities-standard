@@ -14,7 +14,7 @@ contract SimpleUserChecker is UserChecker, Ownable {
   ///
   /// Confirm a user
   function confirm(address _user) 
-    public
+    external
     returns (bool)
   {
     return confirmations[_user];

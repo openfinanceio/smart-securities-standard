@@ -48,8 +48,8 @@ contract TheRegS is RegS, Ownable {
     residencyChecker[_token] = _checker;
   }
 
-    function test(address _from, address _to, uint256 _value, address _token)
-    public
+  function test(address _from, address _to, uint256 _value, address _token)
+    external
     returns (bool)
   {
 

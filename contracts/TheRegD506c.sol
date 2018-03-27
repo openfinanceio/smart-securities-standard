@@ -52,7 +52,7 @@ contract TheRegD506c is RegD506c, Ownable {
   ///
   /// Test whether or not a token transfer is compliant
   function test(address _from, address _to, uint256 _value, address _token) 
-    public 
+    external 
     returns (bool) 
   {
 

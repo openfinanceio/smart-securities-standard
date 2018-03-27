@@ -1,6 +1,6 @@
 pragma solidity ^0.4.18;
 
-import "./interfaces/ICapTable.sol";
+import "./interfaces/ICapTables.sol";
 
 /**
  * This contract handles the creation of Reg D and Reg S securities.
@@ -15,7 +15,7 @@ contract SecurityIssuer {
   }
 
   /** Address of contract that controls the cap table */
-  ICapTable public capTables;
+  ICapTables public capTables;
 
   /** Record the regulation covering the contract */
   mapping(address => Regulation) public regulation;
@@ -28,7 +28,7 @@ contract SecurityIssuer {
 
   // CONSTRUCTOR //
 
-  function SecurityIssuer(ICapTable capTables_) {
+  function SecurityIssuer(ICapTables capTables_) public {
     capTables = capTables_;
   }
 

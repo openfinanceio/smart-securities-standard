@@ -2,34 +2,43 @@ pragma solidity ^0.4.18;
 
 import './RegS.sol';
 import './RegSToken.sol';
-import './RestrictedToken.sol';
+import './RestrictedTokenLogic.sol';
 import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 
+///
 /// @title A token that tracks data relevant for Reg S status;
-contract ARegSToken is RegSToken, RestrictedToken, Ownable {
+contract ARegSToken is RegSToken, RestrictedTokenLogic, Ownable {
 
-
-  bool public isInternational = true;
 
   ///
   /// Total number of shareholders
   uint16 public shareholderCount = 0;
 
 
-  function ARegSToken(uint256 supply, address restrictor_, address issuer, bool isInternational_)
+  function ARegSToken(
+    uint256 supply, 
+    address issuer, 
+    address restrictor_, 
+    address capTables_
+  )
     public
-    {
-      totalSupply_ = supply;
-      restrictor = restrictor_;
-      owner = issuer;
-      balances[issuer] = supply;
-      isInternational = isInternational_;
-    }
+  {
+    totalSupply_ = supply;
+    restrictor = restrictor_;
+    owner = issuer;
 
-    function issue() public onlyOwner {
-      RegS(restrictor).startTrading();
-    }
-  /// not sure if this is entirely necessary. there is no regulation around shareholder limits, however it might be nice to keep track of.
+    capTables = capTables_;
+    index = ICapTables(capTables).initialize(supply);
+  }
+
+  ///
+  /// Officially issue the security
+  function issue() public onlyOwner {
+    RegS(restrictor).startTrading();
+  }
+
+  /// After 12 months a RegS security may be converted to a Reg D security if
+  //it meets the requirements, so we track the number of shareholders.
   function shareholderCountAfter(address _from, address _to, uint256 _value)
     public
     view
