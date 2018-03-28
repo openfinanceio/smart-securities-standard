@@ -23,6 +23,17 @@ contract TheRegD506c is RegD506c, Ownable {
   /// Issuance dates for securities restricted by this contract
   mapping(address => uint256) issuanceDate;
 
+  ///
+  /// Amount of time investors must hold the token before trading
+  uint256 holdingPeriod;
+
+  ///
+  /// At deployment time the holding period can be set
+  function TheRegD506c(uint256 holdingPeriod_) public {
+    holdingPeriod = holdingPeriod_;
+    super();
+  }
+
 
   ///
   /// Register a contract to confirm AML-KYC status
@@ -58,7 +69,7 @@ contract TheRegD506c is RegD506c, Ownable {
 
     // Enforce holding period
     if (issuanceDate[_token] != 0) 
-      require(now <= issuanceDate[_token] + 1 years);
+      require(now <= issuanceDate[_token] + holdingPeriod);
 
     // Enforce shareholder limits
     if (RegD506cToken(_token).isFund())
