@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "license": "MIT",
   "scripts": {
-    "compile": "ls contracts/*.sol | xargs solc --abi --output build --overwrite",
+    "compile": "ls contracts/*.sol | xargs solc --abi -o build --overwrite",
     "test": "tsc && mocha dist/test"
   },
   "devDependencies": {

@@ -29,9 +29,8 @@ contract TheRegD506c is RegD506c, Ownable {
 
   ///
   /// At deployment time the holding period can be set
-  function TheRegD506c(uint256 holdingPeriod_) public {
+  function TheRegD506c(uint256 holdingPeriod_) Ownable() public {
     holdingPeriod = holdingPeriod_;
-    super();
   }
 
 
