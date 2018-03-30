@@ -1,6 +1,6 @@
 {
   "name": "smart-securities-standard",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "scripts": {
     "compile": "ls contracts/*.sol | xargs solc --optimize --abi -o build --overwrite",
