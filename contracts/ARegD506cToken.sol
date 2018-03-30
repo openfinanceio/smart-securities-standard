@@ -22,21 +22,21 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic, Ownable {
   /// The contract is initialized to have zero shareholders with the entire
   /// supply under the control of the contract creator
   function ARegD506cToken(
-    uint256 supply, 
     bool isFund_, 
     address issuer,
     address restrictor_,
-    address capTables_ 
+    address capTables_,
+    uint256 index_
   )
     public
   {
-    totalSupply_ = supply;
+    totalSupply_ = ICapTables(capTables).totalSupply(index_); 
     isFund = isFund_;
     owner = issuer;
 
     restrictor = restrictor_;
     capTables = capTables_;
-    index = ICapTables(capTables).initialize(supply);
+    index = index_;
   }
 
   ///

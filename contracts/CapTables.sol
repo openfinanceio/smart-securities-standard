@@ -21,6 +21,9 @@ contract CapTables is IndexConsumer {
   /** `capTable(security, user) == userBalance` */
   mapping(uint256 => mapping(address => uint256)) public capTable;
 
+  /** Total token supplies */
+  mapping(uint256 => uint256) public totalSupply;
+
   /** @dev retrieve the balance at a given address */
   function balanceOf(uint256 security, address user) public view returns (uint256) {
     return capTable[security][user];
@@ -31,6 +34,7 @@ contract CapTables is IndexConsumer {
     uint256 index = nextIndex();
     addresses[index] = msg.sender;
     capTable[index][msg.sender] = supply;
+    totalSupply[index] = supply;
     return index;
   }
 
