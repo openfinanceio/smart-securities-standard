@@ -1,48 +1,40 @@
-pragma solidity ^0.4.10;
+pragma solidity ^0.4.18;
 
-
-import './RegD506c.sol';
-import './RegD506cToken.sol';
+import './RegS.sol';
+import './RegSToken.sol';
 import './RestrictedTokenLogic.sol';
 import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 ///
-/// @title A token that tracks data relevant for Reg D 506 c status
-contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic, Ownable {
+/// @title A token that tracks data relevant for Reg S status;
+contract ARegSToken is RegSToken, RestrictedTokenLogic, Ownable {
 
-  ///
-  /// Is the token being used to raise capital for a fund?
-  bool public isFund = false;
 
   ///
   /// Total number of shareholders
   uint16 public shareholderCount = 0;
 
-  ///
-  /// The contract is initialized to have zero shareholders with the entire
-  /// supply under the control of the contract creator
-  function ARegD506cToken(
-    bool isFund_, 
-    address issuer,
-    address restrictor_,
+
+  function ARegSToken(
+    address issuer, 
+    address restrictor_, 
     address capTables_,
     uint256 index_
   )
     public
   {
-    totalSupply_ = ICapTables(capTables).totalSupply(index_); 
-    isFund = isFund_;
+    totalSupply_ = ICapTables(capTables_).totalSupply(index_);
+    restrictor = restrictor_;
     owner = issuer;
 
-    restrictor = restrictor_;
     capTables = capTables_;
     index = index_;
   }
 
   ///
-  /// Officially issue the security, beginning the holding period
+  /// Officially issue the security
   function issue() public onlyOwner {
-    RegD506c(restrictor).startHoldingPeriod();
+    RegS(restrictor).startTrading();
   }
 
   ///
@@ -51,7 +43,9 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic, Ownable {
     ICapTables(capTables).migrate(index, newRules);
   }
 
-  function shareholderCountAfter(address _from, address _to, uint256 _value) 
+  /// After 12 months a RegS security may be converted to a Reg D security if
+  //it meets the requirements, so we track the number of shareholders.
+  function shareholderCountAfter(address _from, address _to, uint256 _value)
     public
     view
     returns (uint16)
@@ -59,27 +53,25 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic, Ownable {
     bool newShareholder = balanceOf(_to) == 0;
     bool loseShareholder = balanceOf(_from) == _value;
 
-    if (newShareholder && !loseShareholder) 
+    if (newShareholder && !loseShareholder)
       return shareholderCount + 1;
 
     if (!newShareholder && loseShareholder)
       return shareholderCount - 1;
 
     return shareholderCount;
-   
   }
-  
-  ///
+
   /// Manage shareholder count after transfer
   function transfer(address _to, uint256 _value) public returns (bool) {
-    
+
     uint16 newCount = shareholderCountAfter(msg.sender, _to, _value);
 
     super.transfer(_to, _value);
-    
+
     if (shareholderCount != newCount)
       shareholderCount = newCount;
-    
+
     return true;
 
   }

@@ -1,17 +1,13 @@
-pragma solidity ^0.4.10;
+pragma solidity ^0.4.18;
 
-
-import './RegD506c.sol';
-import './RegD506cToken.sol';
+import './RegS.sol';
+import './RegSToken.sol';
 import './UserChecker.sol';
 import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 
+/// @title Implementation of RegS
+contract TheRegS is RegS {
 
-///
-/// @title Implementation of RegD506c
-contract TheRegD506c is RegD506c, Ownable {
-
-  ///
   /// Table of AML-KYC checking contracts
   mapping(address => address) amlkycChecker;
 
@@ -23,27 +19,19 @@ contract TheRegD506c is RegD506c, Ownable {
   /// Issuance dates for securities restricted by this contract
   mapping(address => uint256) issuanceDate;
 
+  /// Table of residency status checking contracts
+  mapping(address => address) residencyChecker;
+  
   ///
-  /// Amount of time investors must hold the token before trading
-  uint256 holdingPeriod;
-
-  /// 
   /// Error codes
   enum ErrorCode {
     Ok,
-    HoldingPeriod,
-    ShareholderMaximum,
     BuyerAMLKYC,
+    BuyerResidency,
     SellerAMLKYC,
+    SellerResidency,
     Accreditation
   }
-
-  ///
-  /// At deployment time the holding period can be set
-  function TheRegD506c(uint256 holdingPeriod_) Ownable() public {
-    holdingPeriod = holdingPeriod_;
-  }
-
 
   ///
   /// Register a contract to confirm AML-KYC status
@@ -63,53 +51,50 @@ contract TheRegD506c is RegD506c, Ownable {
     accreditationChecker[_token] = _checker;
   }
 
-  ///
-  /// Set the start date for the holding period 
-  function startHoldingPeriod() public {
-    if (issuanceDate[msg.sender] == 0)
-      issuanceDate[msg.sender] = now;
+  /// Register residency checker
+  function registerResidencyChecker(address _checker, address _token)
+    public
+  {
+    require(Ownable(_token).owner() == msg.sender);
+    residencyChecker[_token] = _checker;
   }
-
+  
   ///
-  /// Test whether or not a token transfer is compliant
-  function test(address _from, address _to, uint256 _value, address _token) 
-    external 
-    returns (uint16) 
+  /// Verify rules
+  function test(address _from, address _to, uint256 _value, address _token)
+    external
+    returns (uint16)
   {
 
-    // The security cannot be transfered until after its holding period 
-    if (issuanceDate[_token] != 0 && now < issuanceDate[_token] + holdingPeriod)
-      return uint16(ErrorCode.HoldingPeriod);
-
-    // Shareholder limits
-    // 99 if the security is raising money for a fund and 2000 otherwise
-    uint16 newShareholderCount = RegD506cToken(_token).shareholderCountAfter(_from, _to, _value);
-    if ((RegD506cToken(_token).isFund() && newShareholderCount > 99) 
-      || newShareholderCount > 2000)
-      return uint16(ErrorCode.ShareholderMaximum);
-
-    // The seller must pass AMLKYC 
+    // The seller must have supplied AMLKYC information  
     if (!amlkyc(_from, _token))
       return uint16(ErrorCode.SellerAMLKYC);
     
-    // The buyer must pass AMLKYC
+    // The buyer must have supplied AMLKYC information
     if (!amlkyc(_to, _token))
       return uint16(ErrorCode.BuyerAMLKYC);
 
-    // The buyer must be an accredited investor 
+    // The buyer must be an accredited investor
     if (!accreditation(_to, _token))
       return uint16(ErrorCode.Accreditation);
 
-    // All checks passed
+    // The seller must be a non-USA investor
+    if (!residency(_from, _token))
+      return uint16(ErrorCode.SellerResidency);
+
+    // The buyer must be a non-USA investor
+    if (!residency(_to, _token))
+      return uint16(ErrorCode.BuyerResidency);
+
     return uint16(ErrorCode.Ok);
 
   }
-
-  /// 
+  
+  ///
   /// Confirm AML-KYC status with the registered checker
-  function amlkyc(address _user, address _token) 
+  function amlkyc(address _user, address _token)
     internal
-    returns (bool) 
+    returns (bool)
   {
     return UserChecker(amlkycChecker[_token]).confirm(_user);
   }
@@ -121,6 +106,15 @@ contract TheRegD506c is RegD506c, Ownable {
     returns (bool)
   {
     return UserChecker(accreditationChecker[_token]).confirm(_user);
+  }
+  
+  ///
+  /// Confirm international status
+  function residency(address _user, address _token)
+    internal
+    returns (bool)
+  {
+    return UserChecker(residencyChecker[_token]).confirm(_user);
   }
 
 }
