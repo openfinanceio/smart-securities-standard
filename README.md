@@ -23,17 +23,14 @@ Contract overview 
   interface of the calling contract.
 - `UserChecker`:  Contracts which determine whether or not to block an account
   from doing something should implement this interface. 
-- `RegD506c`:  This interface captures the methods required to configure the
-  contract make a determination about the compliance of a token transfer under
-  regulation D 506(c).  _Note: current implementation allows up to one contract
-  to be designated as an AML/KYC provider for each token.  Similarly for
-  accreditation checkers._ 
-- `RegD506cToken`:  Tokens regulated under regulation D 506(c) should implement
-  this interface, which exposes the current number of shareholders. 
 
 ### Concrete contracts
 
-- `RestrictedToken`:  This contract extends Open Zeppelin's ERC20
+- `CapTables`:  This contract maintains cap tables for a set of securities
+  identified by an integer index.  Each security is associated to an address,
+  which should be an ERC20 contract implementing the appropriate transfer
+  logic.
+- `RestrictedTokenLogic`:  This contract extends Open Zeppelin's ERC20
   `StandardToken` contract, by allowing a `TransferRestrictor` to be configured
   which is used to enforce some rule set.
 - `SimpleUserChecker`:  This contract implements the `UserChecker` interface.
