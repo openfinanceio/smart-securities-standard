@@ -37,6 +37,12 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic, Ownable {
     RegS(restrictor).startTrading();
   }
 
+  ///
+  /// Migrate by changing the owner of the security id in CapTables to the new address
+  function migrate(address newRules) public onlyOwner {
+    ICapTables(capTables).migrate(index, newRules);
+  }
+
   /// After 12 months a RegS security may be converted to a Reg D security if
   //it meets the requirements, so we track the number of shareholders.
   function shareholderCountAfter(address _from, address _to, uint256 _value)

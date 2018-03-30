@@ -45,6 +45,12 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic, Ownable {
     RegD506c(restrictor).startHoldingPeriod();
   }
 
+  ///
+  /// Migrate by changing the owner of the security id in CapTables to the new address
+  function migrate(address newRules) public onlyOwner {
+    ICapTables(capTables).migrate(index, newRules);
+  }
+
   function shareholderCountAfter(address _from, address _to, uint256 _value) 
     public
     view

@@ -20,6 +20,10 @@ contract RestrictedTokenLogic is StandardTokenLogic {
   );
 
   ///
+  /// Contracts which extend this must provided some way to migrate to a new set of rules.
+  function migrate(address newRules) public;
+
+  ///
   /// Simple implementation of restricted transfers
   function transfer(address to, uint256 value) 
     public
