@@ -6,7 +6,7 @@ import './UserChecker.sol';
 import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 /// @title Implementation of RegS
-contract TheRegS is RegS, Ownable {
+contract TheRegS is RegS {
 
   /// Table of AML-KYC checking contracts
   mapping(address => address) amlkycChecker;
@@ -58,33 +58,40 @@ contract TheRegS is RegS, Ownable {
     require(Ownable(_token).owner() == msg.sender);
     residencyChecker[_token] = _checker;
   }
-
+  
+  ///
+  /// Verify rules
   function test(address _from, address _to, uint256 _value, address _token)
     external
     returns (uint16)
   {
 
-    // Enforce AML KYC
+    // The seller must have supplied AMLKYC information  
     if (!amlkyc(_from, _token))
       return uint16(ErrorCode.SellerAMLKYC);
+    
+    // The buyer must have supplied AMLKYC information
     if (!amlkyc(_to, _token))
       return uint16(ErrorCode.BuyerAMLKYC);
 
-    // Enforce accreditation
+    // The buyer must be an accredited investor
     if (!accreditation(_to, _token))
       return uint16(ErrorCode.Accreditation);
 
-    //enforce Residency
+    // The seller must be a non-USA investor
     if (!residency(_from, _token))
       return uint16(ErrorCode.SellerResidency);
+
+    // The buyer must be a non-USA investor
     if (!residency(_to, _token))
       return uint16(ErrorCode.BuyerResidency);
 
     return uint16(ErrorCode.Ok);
 
   }
-
-    /// Confirm AML-KYC status with the registered checker
+  
+  ///
+  /// Confirm AML-KYC status with the registered checker
   function amlkyc(address _user, address _token)
     internal
     returns (bool)
@@ -100,7 +107,9 @@ contract TheRegS is RegS, Ownable {
   {
     return UserChecker(accreditationChecker[_token]).confirm(_user);
   }
-
+  
+  ///
+  /// Confirm international status
   function residency(address _user, address _token)
     internal
     returns (bool)

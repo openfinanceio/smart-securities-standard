@@ -77,22 +77,26 @@ contract TheRegD506c is RegD506c, Ownable {
     returns (uint16) 
   {
 
-    // Enforce holding period
+    // The security cannot be transfered until after its holding period 
     if (issuanceDate[_token] != 0 && now < issuanceDate[_token] + holdingPeriod)
       return uint16(ErrorCode.HoldingPeriod);
 
-    // Enforce shareholder limits
-    if ((RegD506cToken(_token).isFund() && RegD506cToken(_token).shareholderCountAfter(_from, _to, _value) > 99) 
-      || RegD506cToken(_token).shareholderCountAfter(_from, _to, _value) > 2000)
+    // Shareholder limits
+    // 99 if the security is raising money for a fund and 2000 otherwise
+    uint16 newShareholderCount = RegD506cToken(_token).shareholderCountAfter(_from, _to, _value);
+    if ((RegD506cToken(_token).isFund() && newShareholderCount > 99) 
+      || newShareholderCount > 2000)
       return uint16(ErrorCode.ShareholderMaximum);
 
-    // Enforce AML KYC
+    // The seller must pass AMLKYC 
     if (!amlkyc(_from, _token))
       return uint16(ErrorCode.SellerAMLKYC);
+    
+    // The buyer must pass AMLKYC
     if (!amlkyc(_to, _token))
       return uint16(ErrorCode.BuyerAMLKYC);
 
-    // Enforce accreditation
+    // The buyer must be an accredited investor 
     if (!accreditation(_to, _token))
       return uint16(ErrorCode.Accreditation);
 
