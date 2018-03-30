@@ -5,7 +5,7 @@ import './TransferRestrictor.sol';
 
 
 ///
-/// @title An implementation of restrictions under regulation D exemption 506 (c)
+/// @title Functions that tokens will need to call to configure themselves 
 contract RegD506c is TransferRestrictor {
   function startHoldingPeriod() public;
   function registerAmlKycChecker(address _checker, address _token) public;

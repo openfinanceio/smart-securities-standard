@@ -27,6 +27,17 @@ contract TheRegD506c is RegD506c, Ownable {
   /// Amount of time investors must hold the token before trading
   uint256 holdingPeriod;
 
+  /// 
+  /// Error codes
+  enum ErrorCode {
+    Ok,
+    HoldingPeriod,
+    ShareholderMaximum,
+    BuyerAMLKYC,
+    SellerAMLKYC,
+    Accreditation
+  }
+
   ///
   /// At deployment time the holding period can be set
   function TheRegD506c(uint256 holdingPeriod_) Ownable() public {
@@ -63,25 +74,30 @@ contract TheRegD506c is RegD506c, Ownable {
   /// Test whether or not a token transfer is compliant
   function test(address _from, address _to, uint256 _value, address _token) 
     external 
-    returns (bool) 
+    returns (uint16) 
   {
 
     // Enforce holding period
-    if (issuanceDate[_token] != 0) 
-      require(now <= issuanceDate[_token] + holdingPeriod);
+    if (issuanceDate[_token] != 0 && now < issuanceDate[_token] + holdingPeriod)
+      return uint16(ErrorCode.HoldingPeriod);
 
     // Enforce shareholder limits
-    if (RegD506cToken(_token).isFund())
-      require(RegD506cToken(_token).shareholderCountAfter(_from, _to, _value) <= 99);
-    else
-      require(RegD506cToken(_token).shareholderCountAfter(_from, _to, _value) <= 2000);
+    if ((RegD506cToken(_token).isFund() && RegD506cToken(_token).shareholderCountAfter(_from, _to, _value) > 99) 
+      || RegD506cToken(_token).shareholderCountAfter(_from, _to, _value) > 2000)
+      return uint16(ErrorCode.ShareholderMaximum);
 
     // Enforce AML KYC
-    require(amlkyc(_from, _token));
-    require(amlkyc(_to, _token));
+    if (!amlkyc(_from, _token))
+      return uint16(ErrorCode.SellerAMLKYC);
+    if (!amlkyc(_to, _token))
+      return uint16(ErrorCode.BuyerAMLKYC);
 
     // Enforce accreditation
-    require(accreditation(_to, _token));
+    if (!accreditation(_to, _token))
+      return uint16(ErrorCode.Accreditation);
+
+    // All checks passed
+    return uint16(ErrorCode.Ok);
 
   }
 

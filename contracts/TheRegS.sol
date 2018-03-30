@@ -8,7 +8,7 @@ import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 /// @title Implementation of RegS
 contract TheRegS is RegS, Ownable {
 
-    /// Table of AML-KYC checking contracts
+  /// Table of AML-KYC checking contracts
   mapping(address => address) amlkycChecker;
 
   ///
@@ -19,10 +19,21 @@ contract TheRegS is RegS, Ownable {
   /// Issuance dates for securities restricted by this contract
   mapping(address => uint256) issuanceDate;
 
-      /// Table of residency status checking contracts
+  /// Table of residency status checking contracts
   mapping(address => address) residencyChecker;
+  
+  ///
+  /// Error codes
+  enum ErrorCode {
+    Ok,
+    BuyerAMLKYC,
+    BuyerResidency,
+    SellerAMLKYC,
+    SellerResidency,
+    Accreditation
+  }
 
-  //
+  ///
   /// Register a contract to confirm AML-KYC status
   function registerAmlKycChecker(address _checker, address _token)
     public
@@ -50,19 +61,26 @@ contract TheRegS is RegS, Ownable {
 
   function test(address _from, address _to, uint256 _value, address _token)
     external
-    returns (bool)
+    returns (uint16)
   {
 
     // Enforce AML KYC
-    require(amlkyc(_from, _token));
-    require(amlkyc(_to, _token));
+    if (!amlkyc(_from, _token))
+      return uint16(ErrorCode.SellerAMLKYC);
+    if (!amlkyc(_to, _token))
+      return uint16(ErrorCode.BuyerAMLKYC);
 
     // Enforce accreditation
-    require(accreditation(_to, _token));
+    if (!accreditation(_to, _token))
+      return uint16(ErrorCode.Accreditation);
 
     //enforce Residency
-    require(residency(_from, _token));
-    require(residency(_to, _token));
+    if (!residency(_from, _token))
+      return uint16(ErrorCode.SellerResidency);
+    if (!residency(_to, _token))
+      return uint16(ErrorCode.BuyerResidency);
+
+    return uint16(ErrorCode.Ok);
 
   }
 

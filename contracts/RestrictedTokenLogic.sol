@@ -11,6 +11,14 @@ contract RestrictedTokenLogic is StandardTokenLogic {
 
   address restrictor;
 
+  event TransferError(
+    address indexed token,
+    address indexed from,
+    address indexed to,
+    uint256 value,
+    uint16 errorCode
+  );
+
   ///
   /// Simple implementation of restricted transfers
   function transfer(address to, uint256 value) 
@@ -18,9 +26,13 @@ contract RestrictedTokenLogic is StandardTokenLogic {
     returns (bool)
   {
 
-    require(TransferRestrictor(restrictor).test(msg.sender, to, value, this));
-    bool res = super.transfer(to, value);
-    return res;
+    uint16 res = TransferRestrictor(restrictor).test(msg.sender, to, value, this);
+    if (res == 0) {
+      return super.transfer(to, value);
+    } else {
+      emit TransferError(this, msg.sender, to, value, res);
+      return false;
+    }
 
   }
 
@@ -31,9 +43,13 @@ contract RestrictedTokenLogic is StandardTokenLogic {
     returns (bool)
   {
 
-    require(TransferRestrictor(restrictor).test(from, to, value, this));
-    bool res = super.transferFrom(from, to, value);
-    return res;
+    uint16 res = TransferRestrictor(restrictor).test(from, to, value, this);
+    if (res == 0) {
+      return super.transferFrom(from, to, value);
+    } else {
+      emit TransferError(this, from, to, value, res);
+      return false;
+    }
 
   }
   
