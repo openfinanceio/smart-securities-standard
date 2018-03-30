@@ -48,6 +48,26 @@ Contract overview 
   balance.  _Note: An attacker may be able to DoS the investment community by
   buying shares under multiple accounts and exhausting the account allotment._
 
+How to use the contracts
+--
+
+Issuance proceeds in several stages.
+
+- **Stage I.** Choose a deployed `CapTables` contract and send a transaction
+  which calls `initialize` with your total supply.  This will create a new
+  security, owned by the caller and will give you the index of the security.
+  The caller will hold the entire balance.
+- **Stage II.**  Make calls to `CapTables.allocate` to configure the initial
+  distribution of your security.
+- **Stage III.**  Deploy a contract such as `ARegD506cToken` or `ARegSToken`
+  that implements the ruleset you wish to apply.  These contracts require the
+  `CapTable` instance and security index as part of the initial configuration.
+  Now, call `migrate` to transfer control over the cap table to the token
+  contract.
+- **Stage IV.**  If you need to modify the rules that govern token transfers,
+  call `migrate` on the token contract with the address of the contract with
+  the new transfer controls.
+
 Implemented Regulations
 ==
 
