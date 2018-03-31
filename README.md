@@ -78,7 +78,6 @@ This regulation covers certain securities that can be traded by foreign investor
 
 - Both the seller and buyer must pass AML/KYC checks.
 - Both the seller and buyer must reside in a non-US jursidiction.
-- The buyer must be an accredited investor.
 
 RegD 506 (c)
 --
