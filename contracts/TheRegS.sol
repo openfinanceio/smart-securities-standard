@@ -12,10 +12,6 @@ contract TheRegS is RegS {
   mapping(address => address) amlkycChecker;
 
   ///
-  /// Table of accredited investor status checking contracts
-  mapping(address => address) accreditationChecker;
-
-  ///
   /// Issuance dates for securities restricted by this contract
   mapping(address => uint256) issuanceDate;
 
@@ -42,15 +38,6 @@ contract TheRegS is RegS {
     amlkycChecker[_token] = _checker;
   }
 
-  ///
-  /// Register a contract to confirm accreditation status
-  function registerAccreditationChecker(address _checker, address _token)
-    public
-  {
-    require(Ownable(_token).owner() == msg.sender);
-    accreditationChecker[_token] = _checker;
-  }
-
   /// Register residency checker
   function registerResidencyChecker(address _checker, address _token)
     public
@@ -74,10 +61,6 @@ contract TheRegS is RegS {
     if (!amlkyc(_to, _token))
       return uint16(ErrorCode.BuyerAMLKYC);
 
-    // The buyer must be an accredited investor
-    if (!accreditation(_to, _token))
-      return uint16(ErrorCode.Accreditation);
-
     // The seller must be a non-USA investor
     if (!residency(_from, _token))
       return uint16(ErrorCode.SellerResidency);
@@ -99,15 +82,6 @@ contract TheRegS is RegS {
     return UserChecker(amlkycChecker[_token]).confirm(_user);
   }
 
-  ///
-  /// Confirm accredited investor status with the associated checker
-  function accreditation(address _user, address _token)
-    internal
-    returns (bool)
-  {
-    return UserChecker(accreditationChecker[_token]).confirm(_user);
-  }
-  
   ///
   /// Confirm international status
   function residency(address _user, address _token)
