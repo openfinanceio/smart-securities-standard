@@ -24,6 +24,11 @@ contract CapTables is IndexConsumer {
   /** Total token supplies */
   mapping(uint256 => uint256) public totalSupply;
 
+  /* EVENTS */
+
+  event NewSecurity(uint256 security);
+  event SecurityMigration(uint256 security, address newAddress);
+
   /** @dev retrieve the balance at a given address */
   function balanceOf(uint256 security, address user) public view returns (uint256) {
     return capTable[security][user];
@@ -35,6 +40,7 @@ contract CapTables is IndexConsumer {
     addresses[index] = msg.sender;
     capTable[index][msg.sender] = supply;
     totalSupply[index] = supply;
+    emit NewSecurity(index);
     return index;
   }
 
@@ -42,6 +48,7 @@ contract CapTables is IndexConsumer {
   function migrate(uint256 security, address newAddress) public {
     require(msg.sender == addresses[security]);
     addresses[security] = newAddress;
+    emit SecurityMigration(security, newAddress);
   }
 
   /** @dev Transfer an amount of security. */
