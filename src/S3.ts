@@ -1,15 +1,15 @@
 import * as Web3 from "web3";
-
 import * as C from "./Contracts";
 
+export type SecurityId = number;
 export type Security = RegD | RegS;
 
-export interface RegD extends HasInvestors {
+export interface RegD extends BaseSecurity {
   __type: "RegD";
   isFund: boolean;
 };
 
-export interface RegS extends HasInvestors {
+export interface RegS extends BaseSecurity {
   __type: "RegS";
 }
 
@@ -25,7 +25,7 @@ export interface State {
 
 export class Client {
 
-  private state: State;
+  private st: State;
 
   constructor(p: Web3.Provider, s: State | null) {
   }
