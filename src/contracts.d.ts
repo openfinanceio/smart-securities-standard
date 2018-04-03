@@ -15,12 +15,13 @@ interface ERC20 {
   transferFrom(from: string, to: string, value: BigNumber): Promise<boolean>;
 }
 
-interface RegD506cToken extends ERC20 {
-  isFund(): Promise<boolean>;
+interface TransferRestrictor {
+  test(from: string, to: string, amount: BigNumber, token: string): Promise<number>;
 }
 
-interface RegD506c {
-  startHoldingPeriod(): void;
-  registerAmlKycChecker(checker: string, token: string): void;
-  registerAccreditationChecker(checker: string, token: string): void;
+interface ICapTables {
+  balanceOf(sid: BigNumber, user: string): Promise<BigNumber>;
+  initialize(supply: BigNumber): Promise<BigNumber>;
+  migrate(sid: BigNumber, newAddress: string): Promise<void>;
+  transfer(sid: BigNumber, src: string, dest: string, amount: BigNumber): Promise<void>;
 }
