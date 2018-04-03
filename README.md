@@ -90,3 +90,29 @@ conditions.
 - The buyer must be accredited.
 - If the security was issued by a fund, the number of shareholders must not
 	exceed 99; otherwise the number of shareholders must not exceed 2000.
+
+Security Metadata
+==
+There is no need to store metadata about a security such as a human readable
+name on chain.  One simple strategy for coming to consensus about the correct
+metadata is for the network participants to pass around JSON documents of the
+form
+```typescript
+interface Metadata<A> {
+  sequence: number;
+  security: number;
+  data: A;
+  signature: ECDSASignature;
+}
+```
+The signing key should be the whose keyhash is associated to the security in
+`CapTables.addresses` and the signature should cover the derived document:
+```
+{
+  sequence: ...,
+  security: ...,
+  data: ...
+}
+```
+Users should define the current metadata as the document with the highest
+sequence number.
