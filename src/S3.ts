@@ -1,7 +1,10 @@
 import * as Web3 from "web3";
 import * as C from "./Contracts";
 
+/** Securities in S3 are defined by an integer key */
 export type SecurityId = number;
+
+/** S3 supports two kinds of security: regulation D & S */
 export type Security = RegD | RegS;
 
 export interface RegD extends BaseSecurity {
@@ -13,7 +16,7 @@ export interface RegS extends BaseSecurity {
   __type: "RegS";
 }
 
-interface BaseSecurity {
+export interface BaseSecurity {
   investors: { address: string; amount: BigNumber }[];
   metadata: any;
   owner: string;
@@ -24,10 +27,19 @@ export interface State {
 }
 
 export class Client {
-
+  private prov: Web3.Provider;
   private st: State;
 
   constructor(p: Web3.Provider, s: State | null) {
+    this.prov = p;
+    if (s !== null) {
+      this.st = s;
+    } else {
+      // Assume that we are joining the network for the first time
+      this.st = {
+        chainHeight: 0
+      }
+    }
   }
 
   /**

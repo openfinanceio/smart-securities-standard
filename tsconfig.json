@@ -1,18 +1,25 @@
 {
   "compilerOptions": {
     "alwaysStrict": true,
+    "declaration": true,
     "lib": ["es2015"],
     "module": "commonjs",
+    "moduleResolution": "Node",
+    "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
     "outDir": "./dist",
     "rootDir": ".",
     "sourceMap": true,
     "target": "es5"
   },
   "include": [
-    "./src/*",
-    "./test/*",
     "./abi.d.ts",
-    "./node_modules/web3-typescript-typings/index.d.ts"
+    "./build/*.abi",
+    "./node_modules/@0xproject/typescript-typings/types/web3/index.d.ts",
+    "./src/*",
+    "./test/*"
   ]
 }
