@@ -116,3 +116,8 @@ The signing key should be the whose keyhash is associated to the security in
 ```
 Users should define the current metadata as the document with the highest
 sequence number.
+
+Moving value into and out of S3
+==
+We provide the contracts `Importer.sol` and `Exporter.sol` in order to make it
+easy to move value between S3 and other frameworks.
