@@ -69,7 +69,6 @@ export class Client {
    * Get the current state of the system as understood by our node. 
    */
   public state(): State {
-    return;
+    return undefined;
   }
-
 }
