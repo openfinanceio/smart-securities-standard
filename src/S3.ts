@@ -5,7 +5,7 @@ import { ABI } from "./Contracts";
 export type Address = string;
 
 /** Securities in S3 are defined by an integer key */
-export type SecurityId = number;
+export type SecurityId = BigNumber;
 
 /** S3 supports two kinds of security: regulation D & S */
 export type Security = RegD | RegS;
@@ -13,21 +13,36 @@ export type Security = RegD | RegS;
 export interface RegD extends BaseSecurity {
   __type: "RegD";
   isFund: boolean;
+  checkers: {
+    amlKyc: Address;
+    accreditation: Address;
+  };
 }
 
 export interface RegS extends BaseSecurity {
   __type: "RegS";
+  checkers: {
+    amlKyc: Address;
+    jurisdiction: Address;
+  };
 }
 
 export interface BaseSecurity {
-  investors: { address: string; amount: BigNumber }[];
+  investors: { address: Address; amount: BigNumber }[];
+  issuer: Address;
   metadata: any;
-  owner: string;
+  owner: Address;
+}
+
+export interface S3Contracts {
+  capTables: Address | null;
+  regD: Address | null;
+  regS: Address | null;
 }
 
 export interface State {
   chainHeight: number;
-  capTables: Address | null;
+  contracts: S3Contracts;
 }
 
 export class Client {
@@ -45,7 +60,11 @@ export class Client {
       // Assume that we are joining the network for the first time
       this.st = {
         chainHeight: 0,
-        capTables: null
+        contracts: {
+          capTables: null,
+          regD: null,
+          regS: null
+        }
       };
     }
   }
@@ -57,10 +76,10 @@ export class Client {
     if (this.capTables !== null) {
       throw Error("We already have a CapTables instance!");
     }
-    if (this.st !== null && this.st.capTables !== null) {
+    if (this.st !== null && this.st.contracts.capTables !== null) {
       this.capTables = await this.w3.eth
         .contract(ABI.CapTables)
-        .at(this.st.capTables);
+        .at(this.st.contracts.capTables);
     } else {
       throw Error("We need the address of a CapTables contract!");
     }
@@ -71,21 +90,35 @@ export class Client {
    * and an instance of the metadata contract.
    * @return the address of the deployed contract
    */
-  public async initS3(): Promise<string> {
-    if (this.st.capTables !== null) {
+  public async initS3(): Promise<S3Contracts> {
+    if (this.st.contracts.capTables !== null) {
       throw Error("We already have a cap tables contract!");
     }
     const CT = await this.w3.eth
       .contract(ABI.CapTables)
       .new({ from: this.controller });
-    this.st.capTables = CT.address;
-    return CT.address;
+    const RD = await this.w3.eth
+      .contract(ABI.TheRegD506c)
+      .new({ from: this.controller });
+    const RS = await this.w3.eth
+      .contract(ABI.TheRegS)
+      .new({ from: this.controller });
+    const cs = {
+      capTables: CT.address,
+      regD: RD.address,
+      regS: RS.address
+    };
+    this.capTables = CT;
+    this.st.contracts = cs;
+    return cs;
   }
 
   /**
    * Issue a security.
    */
-  public async issue(s: Security): Promise<SecurityId> {
+  public async issue(
+    s: Security
+  ): Promise<{ securityId: SecurityId; token: Address }> {
     if (this.capTables === null) {
       this.initClient();
     }
@@ -93,18 +126,58 @@ export class Client {
       (s, x) => s.plus(x.amount),
       new BigNumber(0)
     );
-    const sid: SecurityId = await (this
-      .capTables as Web3.ContractInstance).initialize(supply, {
+    const CT = this.capTables as Web3.ContractInstance;
+    const sid: SecurityId = await CT.initialize(supply, {
       from: this.controller
     });
+    // Deploy the token logic contracts
+    let T: Web3.ContractInstance;
     switch (s.__type) {
       case "RegD": {
+        if (this.st.contracts.regD === null) {
+          throw Error("We need an instance of TheRegD506c!");
+        }
+        T = await this.w3.eth
+          .contract(ABI.ARegD506cToken)
+          .new(
+            s.isFund,
+            s.issuer,
+            this.st.contracts.regD,
+            this.st.contracts.capTables,
+            sid,
+            { from: this.controller }
+          );
         break;
       }
       case "RegS": {
+        if (this.st.contracts.regS === null) {
+          throw Error("We need an instance of TheRegS!");
+        }
+        T = await this.w3.eth
+          .contract(ABI.ARegSToken)
+          .new(
+            s.issuer,
+            this.st.contracts.regS,
+            this.st.contracts.capTables,
+            sid,
+            { from: this.controller }
+          );
       }
     }
-    return sid;
+    // Configure the cap table
+    // TODO:
+    // - [ ] Find a more efficient way to do this
+    await Promise.all(
+      s.investors.map(inv => {
+        T.transferFrom(this.controller, inv.address, inv.amount, {
+          from: this.controller
+        });
+      })
+    );
+    return {
+      securityId: sid,
+      token: T.address
+    };
   }
 
   /**
@@ -149,6 +222,6 @@ export class Client {
    * Get the current state of the system as understood by our node.
    */
   public state(): State {
-    return undefined;
+    return this.st;
   }
 }
