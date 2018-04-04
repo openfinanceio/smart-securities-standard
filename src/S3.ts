@@ -1,5 +1,5 @@
 import * as Web3 from "web3";
-import * as C from "./Contracts";
+import { ABI } from "./Contracts";
 
 /** 20 byte hex-encoded key hash prefixed with "0x" */
 export type Address = string;
@@ -13,7 +13,7 @@ export type Security = RegD | RegS;
 export interface RegD extends BaseSecurity {
   __type: "RegD";
   isFund: boolean;
-};
+}
 
 export interface RegS extends BaseSecurity {
   __type: "RegS";
@@ -31,11 +31,14 @@ export interface State {
 }
 
 export class Client {
-  private prov: Web3.Provider;
+  private capTables: Web3.ContractInstance | null;
+  private controller: Address;
   private st: State;
+  private w3: Web3;
 
-  constructor(p: Web3.Provider, s: State | null) {
-    this.prov = p;
+  constructor(c: Address, s: State | null, p: Web3.Provider) {
+    this.controller = c;
+    this.w3 = new Web3(p);
     if (s !== null) {
       this.st = s;
     } else {
@@ -43,7 +46,23 @@ export class Client {
       this.st = {
         chainHeight: 0,
         capTables: null
-      }
+      };
+    }
+  }
+
+  /**
+   * Create a CapTables instance if possible.
+   */
+  public async initClient(): Promise<void> {
+    if (this.capTables !== null) {
+      throw Error("We already have a CapTables instance!");
+    }
+    if (this.st !== null && this.st.capTables !== null) {
+      this.capTables = await this.w3.eth
+        .contract(ABI.CapTables)
+        .at(this.st.capTables);
+    } else {
+      throw Error("We need the address of a CapTables contract!");
     }
   }
 
@@ -52,17 +71,42 @@ export class Client {
    * and an instance of the metadata contract.
    * @return the address of the deployed contract
    */
-  public async init(): Promise<string> {
-    return undefined;
+  public async initS3(): Promise<string> {
+    if (this.st.capTables !== null) {
+      throw Error("We already have a cap tables contract!");
+    }
+    const CT = await this.w3.eth
+      .contract(ABI.CapTables)
+      .new({ from: this.controller });
+    this.st.capTables = CT.address;
+    return CT.address;
   }
- 
+
   /**
    * Issue a security.
    */
   public async issue(s: Security): Promise<SecurityId> {
-    return undefined;
+    if (this.capTables === null) {
+      this.initClient();
+    }
+    const supply: BigNumber = s.investors.reduce(
+      (s, x) => s.plus(x.amount),
+      new BigNumber(0)
+    );
+    const sid: SecurityId = await (this
+      .capTables as Web3.ContractInstance).initialize(supply, {
+      from: this.controller
+    });
+    switch (s.__type) {
+      case "RegD": {
+        break;
+      }
+      case "RegS": {
+      }
+    }
+    return sid;
   }
-  
+
   /**
    * Change the rules surrounding the transfer of a security.
    */
@@ -70,7 +114,7 @@ export class Client {
     return;
   }
 
-  /** 
+  /**
    * Export value to an ERC20 token.
    * @param id The security we are exporting
    * @param controller The address which controls the security
@@ -83,7 +127,7 @@ export class Client {
   public async setupExporter(
     id: SecurityId,
     controller: Address,
-    configureToken: (exporter: Address) => Promise<Address>,
+    configureToken: (exporter: Address) => Promise<Address>
   ): Promise<void> {
     return;
   }
@@ -100,9 +144,9 @@ export class Client {
   ): Promise<void> {
     return;
   }
-  
-  /** 
-   * Get the current state of the system as understood by our node. 
+
+  /**
+   * Get the current state of the system as understood by our node.
    */
   public state(): State {
     return undefined;
