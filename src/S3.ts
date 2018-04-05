@@ -1,4 +1,5 @@
 import * as Web3 from "web3";
+import { SolidityFunction } from "web3/lib/web3/function";
 import { ABI } from "./Contracts";
 
 /** 20 byte hex-encoded key hash prefixed with "0x" */
@@ -40,10 +41,32 @@ export interface S3Contracts {
   regS: Address | null;
 }
 
+export interface S3Metadata {
+  id: SecurityId;
+  name: string;
+}
+
 export interface State {
   chainHeight: number;
   contracts: S3Contracts;
+  securities: S3Metadata[];
 }
+
+// function migrate(address newAddress);
+const migrateABI = {
+  name: "migrate",
+  payable: false,
+  constant: false,
+  type: "function",
+  inputs: [
+    {
+      name: "newAddress",
+      type: "address"
+    }
+  ],
+  outputs: [],
+  stateMutability: "nonpayable"
+};
 
 export class Client {
   private capTables: Web3.ContractInstance | null;
@@ -183,8 +206,30 @@ export class Client {
   /**
    * Change the rules surrounding the transfer of a security.
    */
-  public async migrate(sid: SecurityId, newLogic: string): Promise<void> {
+  public async migrate(
+    sid: SecurityId,
+    newLogic: string,
+    administrator: string
+  ): Promise<void> {
+    const tokenAddress = await this.capTables.addresses.call(sid);
+    // We assume that the contract at address `tokenAddress` has a unary
+    // migrate method taking the new address.
+    const mgrt = new SolidityFunction(this.w3.eth, migrateABI, tokenAddress);
+    mgrt.sendTransaction(newLogic, {
+      from: administrator
+    });
     return;
+  }
+
+  /**
+   * Produce a URI for a security.  Note that the URI must include the address
+   * of the CapTables contract as the security's ID.
+   */
+  public securityURI(x: SecurityId): string {
+    if (this.st.contracts.capTables === null) {
+      throw MissingCapTables;
+    }
+    return `s3://${this.st.contracts.capTables.slice(2)}/${sid.toString()}`;
   }
 
   /**
