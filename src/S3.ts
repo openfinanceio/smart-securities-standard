@@ -31,7 +31,10 @@ export interface RegS extends BaseSecurity {
 export interface BaseSecurity {
   investors: { address: Address; amount: BigNumber }[];
   issuer: Address;
-  metadata: any;
+  metadata: {
+    name: string;
+    [prop: string]: any;
+  };
   owner: Address;
 }
 
@@ -42,6 +45,7 @@ export interface S3Contracts {
 }
 
 export interface S3Metadata {
+  currentLogic: string;
   id: SecurityId;
   name: string;
 }
@@ -68,6 +72,8 @@ const migrateABI = {
   stateMutability: "nonpayable"
 };
 
+export const MissingCapTables = Error("A CapTables instance is required!");
+
 export class Client {
   private capTables: Web3.ContractInstance | null;
   private controller: Address;
@@ -87,7 +93,8 @@ export class Client {
           capTables: null,
           regD: null,
           regS: null
-        }
+        },
+        securities: []
       };
     }
   }
@@ -138,6 +145,8 @@ export class Client {
 
   /**
    * Issue a security.
+   * TODO:
+   * - [ ] make the allocation more efficient (maybe using coupons)
    */
   public async issue(
     s: Security
@@ -145,6 +154,7 @@ export class Client {
     if (this.capTables === null) {
       this.initClient();
     }
+    // Compute the total supply
     const supply: BigNumber = s.investors.reduce(
       (s, x) => s.plus(x.amount),
       new BigNumber(0)
@@ -154,42 +164,41 @@ export class Client {
       from: this.controller
     });
     // Deploy the token logic contracts
-    let T: Web3.ContractInstance;
-    switch (s.__type) {
-      case "RegD": {
-        if (this.st.contracts.regD === null) {
-          throw Error("We need an instance of TheRegD506c!");
+    const computeInstance = () => {
+      switch (s.__type) {
+        case "RegD": {
+          if (this.st.contracts.regD === null) {
+            throw Error("We need an instance of TheRegD506c!");
+          }
+          return this.w3.eth
+            .contract(ABI.ARegD506cToken)
+            .new(
+              s.isFund,
+              s.issuer,
+              this.st.contracts.regD,
+              this.st.contracts.capTables,
+              sid,
+              { from: this.controller }
+            );
         }
-        T = await this.w3.eth
-          .contract(ABI.ARegD506cToken)
-          .new(
-            s.isFund,
-            s.issuer,
-            this.st.contracts.regD,
-            this.st.contracts.capTables,
-            sid,
-            { from: this.controller }
-          );
-        break;
-      }
-      case "RegS": {
-        if (this.st.contracts.regS === null) {
-          throw Error("We need an instance of TheRegS!");
+        case "RegS": {
+          if (this.st.contracts.regS === null) {
+            throw Error("We need an instance of TheRegS!");
+          }
+          return this.w3.eth
+            .contract(ABI.ARegSToken)
+            .new(
+              s.issuer,
+              this.st.contracts.regS,
+              this.st.contracts.capTables,
+              sid,
+              { from: this.controller }
+            );
         }
-        T = await this.w3.eth
-          .contract(ABI.ARegSToken)
-          .new(
-            s.issuer,
-            this.st.contracts.regS,
-            this.st.contracts.capTables,
-            sid,
-            { from: this.controller }
-          );
       }
-    }
+    };
+    const T = computeInstance();
     // Configure the cap table
-    // TODO:
-    // - [ ] Find a more efficient way to do this
     await Promise.all(
       s.investors.map(inv => {
         T.transferFrom(this.controller, inv.address, inv.amount, {
@@ -197,6 +206,11 @@ export class Client {
         });
       })
     );
+    this.st.securities.push({
+      currentLogic: T.address,
+      id: sid,
+      name: s.metadata.name
+    });
     return {
       securityId: sid,
       token: T.address
@@ -205,27 +219,29 @@ export class Client {
 
   /**
    * Change the rules surrounding the transfer of a security.
+   * The old contract should implement a unary method `migrate` that takes that
+   * address of the new contract and configures the new contract appropriately.
    */
   public async migrate(
     sid: SecurityId,
     newLogic: string,
     administrator: string
   ): Promise<void> {
+    if (this.capTables === null) {
+      throw MissingCapTables;
+    }
     const tokenAddress = await this.capTables.addresses.call(sid);
-    // We assume that the contract at address `tokenAddress` has a unary
-    // migrate method taking the new address.
     const mgrt = new SolidityFunction(this.w3.eth, migrateABI, tokenAddress);
-    mgrt.sendTransaction(newLogic, {
+    await mgrt.sendTransaction(newLogic, {
       from: administrator
     });
-    return;
   }
 
   /**
    * Produce a URI for a security.  Note that the URI must include the address
    * of the CapTables contract as the security's ID.
    */
-  public securityURI(x: SecurityId): string {
+  public securityURI(sid: SecurityId): string {
     if (this.st.contracts.capTables === null) {
       throw MissingCapTables;
     }
@@ -241,6 +257,9 @@ export class Client {
    *
    * _Note: Before setting up the exporter, control over the security somehow
    * has to be transfered to the named controller._
+   *
+   * TODO:
+   * - [ ] implement
    */
   public async setupExporter(
     id: SecurityId,
@@ -255,6 +274,9 @@ export class Client {
    * @param srcToken The ERC20 token from which to import value
    * @param configureToken A function which sets up S3 token rules and provides
    *   an address to which to transfer control of the newly created security.
+   *
+   * TODO:
+   * - [ ] implement
    */
   public async setupImporter(
     srcToken: Address,

@@ -1,7 +1,10 @@
-import * as CapTablesABI from "../build/CapTables.abi";
 import * as ARegD506cTokenABI from "../build/ARegD506cToken.abi";
-import * as TheRegD506cABI from "../build/TheRegD506c.abi";
 import * as ARegSTokenABI from "../build/ARegSToken.abi";
+import * as CapTablesABI from "../build/CapTables.abi";
+import * as ExporterABI from "../build/Exporter.abi";
+import * as ImporterABI from "../build/Importer.abi";
+import * as SimpleUserCheckerABI from "../build/SimpleUserChecker.abi";
+import * as TheRegD506cABI from "../build/TheRegD506c.abi";
 import * as TheRegSABI from "../build/TheRegS.abi";
 
 import * as ZRX from "@0xproject/types";
@@ -11,6 +14,9 @@ export namespace ABI {
   export const ARegD506cToken = (ARegD506cTokenABI as any) as ZRX.ContractAbi;
   export const ARegSToken = (ARegSTokenABI as any) as ZRX.ContractAbi;
   export const CapTables = (CapTablesABI as any) as ZRX.ContractAbi;
+  export const Exporter = (ExporterABI as any) as ZRX.ContractAbi;
+  export const Importer = (ImporterABI as any) as ZRX.ContractAbi;
+  export const SimpleUserChecker = (SimpleUserCheckerABI as any) as ZRX.ContractAbi;
   export const TheRegD506c = (TheRegD506cABI as any) as ZRX.ContractAbi;
   export const TheRegS = (TheRegSABI as any) as ZRX.ContractAbi;
 }
