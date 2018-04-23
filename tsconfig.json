@@ -17,8 +17,8 @@
     "target": "es5"
   },
   "include": [
-    "./abi.d.ts",
-    "./build/*.abi",
+    "./global.d.ts",
+    "./build/*.json",
     "./node_modules/@0xproject/typescript-typings/types/web3/index.d.ts",
     "./src/*",
     "./test/*"

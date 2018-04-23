@@ -1,0 +1,7 @@
+#! /bin/bash
+
+# Compile contracts
+ls contracts/*.sol | xargs solc --optimize --abi -o build --overwrite
+
+# Rename artifacts
+for file in build/*.abi; do mv $file `echo $file | sed 's/\(.*\)\.abi/\1.json/'`; done

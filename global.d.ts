@@ -1,4 +1,4 @@
-declare module "*.abi" {
+declare module "*.json" {
   export const content: any;
   export default content;
 }

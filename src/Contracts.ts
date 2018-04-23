@@ -1,11 +1,11 @@
-import * as ARegD506cTokenABI from "../build/ARegD506cToken.abi";
-import * as ARegSTokenABI from "../build/ARegSToken.abi";
-import * as CapTablesABI from "../build/CapTables.abi";
-import * as ExporterABI from "../build/Exporter.abi";
-import * as ImporterABI from "../build/Importer.abi";
-import * as SimpleUserCheckerABI from "../build/SimpleUserChecker.abi";
-import * as TheRegD506cABI from "../build/TheRegD506c.abi";
-import * as TheRegSABI from "../build/TheRegS.abi";
+import * as ARegD506cTokenABI from "../build/ARegD506cToken.json";
+import * as ARegSTokenABI from "../build/ARegSToken.json";
+import * as CapTablesABI from "../build/CapTables.json";
+import * as ExporterABI from "../build/Exporter.json";
+import * as ImporterABI from "../build/Importer.json";
+import * as SimpleUserCheckerABI from "../build/SimpleUserChecker.json";
+import * as TheRegD506cABI from "../build/TheRegD506c.json";
+import * as TheRegSABI from "../build/TheRegS.json";
 
 import * as ZRX from "@0xproject/types";
 import BigNumber from "bignumber.js";
