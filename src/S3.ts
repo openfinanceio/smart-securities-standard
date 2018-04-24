@@ -1,3 +1,5 @@
+import { BigNumber } from "bignumber.js";
+import * as _ from "lodash";
 import * as Web3 from "web3";
 import { SolidityFunction } from "web3/lib/web3/function";
 import { ABI } from "./Contracts";
@@ -108,7 +110,7 @@ export class Client {
     }
     if (this.st !== null && this.st.contracts.capTables !== null) {
       this.capTables = await this.w3.eth
-        .contract(ABI.CapTables)
+        .contract(ABI.CapTables.abi)
         .at(this.st.contracts.capTables);
     } else {
       throw Error("We need the address of a CapTables contract!");
@@ -120,27 +122,62 @@ export class Client {
    * and an instance of the metadata contract.
    * @return the address of the deployed contract
    */
-  public async initS3(): Promise<S3Contracts> {
+  public initS3(): Promise<S3Contracts> {
     if (this.st.contracts.capTables !== null) {
       throw Error("We already have a cap tables contract!");
     }
-    const CT = await this.w3.eth
-      .contract(ABI.CapTables)
-      .new({ from: this.controller });
-    const RD = await this.w3.eth
-      .contract(ABI.TheRegD506c)
-      .new({ from: this.controller });
-    const RS = await this.w3.eth
-      .contract(ABI.TheRegS)
-      .new({ from: this.controller });
-    const cs = {
-      capTables: CT.address,
-      regD: RD.address,
-      regS: RS.address
-    };
-    this.capTables = CT;
-    this.st.contracts = cs;
-    return cs;
+    return new Promise(resolve => {
+      const cs: S3Contracts = {
+        capTables: null,
+        regD: null,
+        regS: null
+      };
+      let CT: Web3.ContractInstance;
+      const finish = () => {
+        if (
+          !(_.isNull(cs.capTables) || _.isNull(cs.regD) || _.isNull(cs.regS))
+        ) {
+          this.st.contracts = cs;
+          this.capTables = CT;
+          resolve(cs);
+        }
+      };
+      CT = this.w3.eth.contract(ABI.CapTables.abi).new(
+        {
+          data: ABI.CapTables.bytecode,
+          from: this.controller,
+          gas: 5e5
+        },
+        (err: Error, contract: Web3.ContractInstance) => {
+          if (!_.isUndefined(contract.address)) {
+            cs.capTables = contract.address;
+            finish();
+          }
+        }
+      );
+      this.w3.eth
+        .contract(ABI.TheRegD506c.abi)
+        .new(
+          { data: ABI.TheRegD506c.bytecode, from: this.controller, gas: 1e6 },
+          (err: Error, contract: Web3.ContractInstance) => {
+            if (!_.isUndefined(contract.address)) {
+              cs.regD = contract.address;
+              finish();
+            }
+          }
+        );
+      this.w3.eth
+        .contract(ABI.TheRegS.abi)
+        .new(
+          { data: ABI.TheRegS.bytecode, from: this.controller, gas: 5e5 },
+          (err: Error, contract: Web3.ContractInstance) => {
+            if (!_.isUndefined(contract.address)) {
+              cs.regS = contract.address;
+              finish();
+            }
+          }
+        );
+    });
   }
 
   /**
@@ -161,7 +198,8 @@ export class Client {
     );
     const CT = this.capTables as Web3.ContractInstance;
     const sid: SecurityId = await CT.initialize(supply, {
-      from: this.controller
+      from: this.controller,
+      gas: 2e5
     });
     // Deploy the token logic contracts
     const computeInstance = () => {
@@ -171,14 +209,18 @@ export class Client {
             throw Error("We need an instance of TheRegD506c!");
           }
           return this.w3.eth
-            .contract(ABI.ARegD506cToken)
+            .contract(ABI.ARegD506cToken.abi)
             .new(
               s.isFund,
               s.issuer,
               this.st.contracts.regD,
               this.st.contracts.capTables,
               sid,
-              { from: this.controller }
+              {
+                data: ABI.ARegD506cToken.bytecode,
+                from: this.controller,
+                gas: 4e5
+              }
             );
         }
         case "RegS": {
@@ -186,13 +228,13 @@ export class Client {
             throw Error("We need an instance of TheRegS!");
           }
           return this.w3.eth
-            .contract(ABI.ARegSToken)
+            .contract(ABI.ARegSToken.abi)
             .new(
               s.issuer,
               this.st.contracts.regS,
               this.st.contracts.capTables,
               sid,
-              { from: this.controller }
+              { data: ABI.ARegSToken.bytecode, from: this.controller, gas: 4e5 }
             );
         }
       }
