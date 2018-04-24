@@ -32,12 +32,6 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic, Ownable {
   }
 
   ///
-  /// Officially issue the security
-  function issue() public onlyOwner {
-    RegS(restrictor).startTrading();
-  }
-
-  ///
   /// Migrate by changing the owner of the security id in CapTables to the new address
   function migrate(address newRules) public onlyOwner {
     ICapTables(capTables).migrate(index, newRules);

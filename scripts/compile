@@ -1,7 +1,18 @@
 #! /bin/bash
 
 # Compile contracts
-ls contracts/*.sol | xargs solc --optimize --abi -o build --overwrite
+ls contracts/*.sol | xargs solc --optimize --abi --bin -o build --overwrite
 
-# Rename artifacts
-for file in build/*.abi; do mv $file `echo $file | sed 's/\(.*\)\.abi/\1.json/'`; done
+# Combine artifacts 
+for abiFile in build/*.abi; do 
+  fileRoot=$(echo -n $abiFile | head -c -4)
+  echo "{ \"abi\": $(cat $abiFile), \"bytecode\": \"$(cat $fileRoot.bin)\" }" > $fileRoot.json
+done
+
+# Clean up
+rm build/*.abi build/*.bin
+
+# Place
+mkdir -p dist/build
+cp build/*.json dist/build
+

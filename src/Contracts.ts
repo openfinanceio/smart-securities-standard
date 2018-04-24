@@ -10,15 +10,20 @@ import * as TheRegSABI from "../build/TheRegS.json";
 import * as ZRX from "@0xproject/types";
 import BigNumber from "bignumber.js";
 
+export interface Artifact {
+  abi: ZRX.ContractAbi;
+  bytecode: string;
+}
+
 export namespace ABI {
-  export const ARegD506cToken = (ARegD506cTokenABI as any) as ZRX.ContractAbi;
-  export const ARegSToken = (ARegSTokenABI as any) as ZRX.ContractAbi;
-  export const CapTables = (CapTablesABI as any) as ZRX.ContractAbi;
-  export const Exporter = (ExporterABI as any) as ZRX.ContractAbi;
-  export const Importer = (ImporterABI as any) as ZRX.ContractAbi;
-  export const SimpleUserChecker = (SimpleUserCheckerABI as any) as ZRX.ContractAbi;
-  export const TheRegD506c = (TheRegD506cABI as any) as ZRX.ContractAbi;
-  export const TheRegS = (TheRegSABI as any) as ZRX.ContractAbi;
+  export const ARegD506cToken = (ARegD506cTokenABI as any) as Artifact;
+  export const ARegSToken = (ARegSTokenABI as any) as Artifact;
+  export const CapTables = (CapTablesABI as any) as Artifact;
+  export const Exporter = (ExporterABI as any) as Artifact;
+  export const Importer = (ImporterABI as any) as Artifact;
+  export const SimpleUserChecker = (SimpleUserCheckerABI as any) as Artifact;
+  export const TheRegD506c = (TheRegD506cABI as any) as Artifact;
+  export const TheRegS = (TheRegSABI as any) as Artifact;
 }
 
 /* INTERFACES */
