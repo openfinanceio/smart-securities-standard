@@ -15,20 +15,20 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic, Ownable {
   uint16 public shareholderCount = 0;
 
 
-  function ARegSToken(
+  constructor(
+    uint256 supply,
     address issuer, 
     address restrictor_, 
-    address capTables_,
-    uint256 index_
+    address capTables_
   )
     public
   {
-    totalSupply_ = ICapTables(capTables_).totalSupply(index_);
+    totalSupply_ = supply; 
     restrictor = restrictor_;
     owner = issuer;
 
     capTables = capTables_;
-    index = index_;
+    index = ICapTables(capTables).initialize(supply);
   }
 
   ///

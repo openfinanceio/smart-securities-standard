@@ -9,7 +9,7 @@ import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 ///
 /// @title Implementation of RegD506c
-contract TheRegD506c is RegD506c, Ownable {
+contract TheRegD506c is RegD506c, Ownable() {
 
   ///
   /// Table of AML-KYC checking contracts
@@ -40,7 +40,7 @@ contract TheRegD506c is RegD506c, Ownable {
 
   ///
   /// At deployment time the holding period can be set
-  function TheRegD506c(uint256 holdingPeriod_) Ownable() public {
+  constructor(uint256 holdingPeriod_) public {
     holdingPeriod = holdingPeriod_;
   }
 

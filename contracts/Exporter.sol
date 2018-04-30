@@ -19,7 +19,7 @@ contract Exporter is Ownable {
 
   /* CONSTRUCTOR */
 
-  function Exporter(address capTables_, uint256 securityId_) Ownable() public {
+  constructor(address capTables_, uint256 securityId_) Ownable() public {
     capTables = capTables_;
     securityId = securityId_;
   }

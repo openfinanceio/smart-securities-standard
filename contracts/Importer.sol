@@ -19,7 +19,7 @@ contract Importer is Ownable {
 
   /* CONSTRUCTOR */
 
-  function Importer(address capTables_, address sourceToken_) Ownable() public {
+  constructor(address capTables_, address sourceToken_) Ownable() public {
     capTables = capTables_;
     sourceToken = sourceToken_;
     uint256 supply = ERC20(sourceToken_).totalSupply();
