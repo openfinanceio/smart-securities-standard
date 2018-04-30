@@ -38,7 +38,7 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic, Ownable {
     capTables = capTables_;
 
     // Create the cap table
-    index = ICapTables(capTables).initialize(supply);
+    index = ICapTables(capTables).initialize(supply, msg.sender);
   }
 
   ///

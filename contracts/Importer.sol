@@ -23,7 +23,7 @@ contract Importer is Ownable {
     capTables = capTables_;
     sourceToken = sourceToken_;
     uint256 supply = ERC20(sourceToken_).totalSupply();
-    securityId = ICapTables(capTables_).initialize(supply);
+    securityId = ICapTables(capTables_).initialize(supply, this);
   }
 
   /* API */

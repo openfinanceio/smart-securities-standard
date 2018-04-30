@@ -35,10 +35,10 @@ contract CapTables is IndexConsumer {
   }
 
   /** @dev Add a security to the contract. */
-  function initialize(uint256 supply) public returns (uint256) {
+  function initialize(uint256 supply, address holder) public returns (uint256) {
     uint256 index = nextIndex();
-    addresses[index] = msg.sender;
-    capTable[index][msg.sender] = supply;
+    addresses[index] = holder;
+    capTable[index][holder] = supply;
     totalSupply[index] = supply;
     emit NewSecurity(index);
     return index;

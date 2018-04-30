@@ -28,7 +28,7 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic, Ownable {
     owner = issuer;
 
     capTables = capTables_;
-    index = ICapTables(capTables).initialize(supply);
+    index = ICapTables(capTables).initialize(supply, msg.sender);
   }
 
   ///
