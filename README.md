@@ -70,15 +70,6 @@ Issuance proceeds in several stages.
 
 Implemented Regulations
 ==
-
-Reg S
---
-
-This regulation covers certain securities that can be traded by foreign investors.
-
-- Both the seller and buyer must pass AML/KYC checks.
-- Both the seller and buyer must reside in a non-US jursidiction.
-
 RegD 506 (c)
 --
 
@@ -90,6 +81,14 @@ conditions.
 - The buyer must be accredited.
 - If the security was issued by a fund, the number of shareholders must not
 	exceed 99; otherwise the number of shareholders must not exceed 2000.
+
+Reg S
+--
+
+This regulation covers certain securities that can be traded by foreign investors.
+
+- Both the seller and buyer must pass AML/KYC checks.
+- Both the seller and buyer must reside in a non-US jursidiction.
 
 Security Metadata
 ==
@@ -121,3 +120,4 @@ Moving value into and out of S3
 ==
 We provide the contracts `Importer.sol` and `Exporter.sol` in order to make it
 easy to move value between S3 and other frameworks.
+
