@@ -1,78 +1,21 @@
-import { BigNumber } from "bignumber.js";
-import * as _ from "lodash";
 import * as Web3 from "web3";
-import { SolidityFunction } from "web3/lib/web3/function";
 import { ABI } from "./Contracts";
-
-/** 20 byte hex-encoded key hash prefixed with "0x" */
-export type Address = string;
-
-/** Securities in S3 are defined by an integer key */
-export type SecurityId = BigNumber;
-
-/** S3 supports two kinds of security: regulation D & S */
-export type Security = RegD | RegS;
-
-export interface RegD extends BaseSecurity {
-  __type: "RegD";
-  isFund: boolean;
-  checkers: {
-    amlKyc: Address;
-    accreditation: Address;
-  };
-}
-
-export interface RegS extends BaseSecurity {
-  __type: "RegS";
-  checkers: {
-    amlKyc: Address;
-    jurisdiction: Address;
-  };
-}
-
-export interface BaseSecurity {
-  investors: { address: Address; amount: BigNumber }[];
-  issuer: Address;
-  metadata: {
-    name: string;
-    [prop: string]: any;
-  };
-  owner: Address;
-}
-
-export interface S3Contracts {
-  capTables: Address | null;
-  regD: Address | null;
-  regS: Address | null;
-}
-
-export interface S3Metadata {
-  currentLogic: string;
-  id: SecurityId;
-  name: string;
-}
+import * as Init from "./Init";
+import { issue } from "./Issue";
+import { migrate, setupExporter, setupImporter } from "./Migrate";
+import {
+  Address,
+  S3Contracts,
+  S3Metadata,
+  SecurityId,
+  Security
+} from "./Types";
 
 export interface State {
   chainHeight: number;
   contracts: S3Contracts;
   securities: S3Metadata[];
 }
-
-// function migrate(address newAddress);
-const migrateABI = {
-  name: "migrate",
-  payable: false,
-  constant: false,
-  type: "function",
-  inputs: [
-    {
-      name: "newAddress",
-      type: "address"
-    }
-  ],
-  outputs: [],
-  stateMutability: "nonpayable"
-};
 
 export const MissingCapTables = Error("A CapTables instance is required!");
 
@@ -122,62 +65,22 @@ export class Client {
    * and an instance of the metadata contract.
    * @return the address of the deployed contract
    */
-  public initS3(): Promise<S3Contracts> {
-    if (this.st.contracts.capTables !== null) {
-      throw Error("We already have a cap tables contract!");
-    }
-    return new Promise(resolve => {
-      const cs: S3Contracts = {
-        capTables: null,
-        regD: null,
-        regS: null
-      };
-      let CT: Web3.ContractInstance;
-      const finish = () => {
-        if (
-          !(_.isNull(cs.capTables) || _.isNull(cs.regD) || _.isNull(cs.regS))
-        ) {
-          this.st.contracts = cs;
-          this.capTables = CT;
-          resolve(cs);
-        }
-      };
-      CT = this.w3.eth.contract(ABI.CapTables.abi).new(
-        {
-          data: ABI.CapTables.bytecode,
-          from: this.controller,
-          gas: 5e5
-        },
-        (err: Error, contract: Web3.ContractInstance) => {
-          if (!_.isUndefined(contract.address)) {
-            cs.capTables = contract.address;
-            finish();
-          }
-        }
-      );
-      this.w3.eth
-        .contract(ABI.TheRegD506c.abi)
-        .new(
-          { data: ABI.TheRegD506c.bytecode, from: this.controller, gas: 1e6 },
-          (err: Error, contract: Web3.ContractInstance) => {
-            if (!_.isUndefined(contract.address)) {
-              cs.regD = contract.address;
-              finish();
-            }
-          }
-        );
-      this.w3.eth
-        .contract(ABI.TheRegS.abi)
-        .new(
-          { data: ABI.TheRegS.bytecode, from: this.controller, gas: 5e5 },
-          (err: Error, contract: Web3.ContractInstance) => {
-            if (!_.isUndefined(contract.address)) {
-              cs.regS = contract.address;
-              finish();
-            }
-          }
-        );
-    });
+  public async initS3(): Promise<S3Contracts> {
+    const [cs, CT] = await Init.initS3(
+      this.w3,
+      this.st.contracts.capTables,
+      this.controller
+    );
+    this.capTables = CT;
+    this.st.contracts = cs;
+    return cs;
+  }
+
+  /**
+   * Set up a new user checker to use.
+   */
+  public initUserChecker(checkers: Address[]): Promise<Address> {
+    return Init.initUserChecker(checkers, this.controller, this.w3);
   }
 
   /**
@@ -186,77 +89,23 @@ export class Client {
    * - [ ] make the allocation more efficient (maybe using coupons)
    */
   public async issue(
-    s: Security
+    security: Security
   ): Promise<{ securityId: SecurityId; token: Address }> {
     if (this.capTables === null) {
       this.initClient();
     }
-    // Compute the total supply
-    const supply: BigNumber = s.investors.reduce(
-      (s, x) => s.plus(x.amount),
-      new BigNumber(0)
-    );
-    const CT = this.capTables as Web3.ContractInstance;
-    const sid: SecurityId = await CT.initialize(supply, {
-      from: this.controller,
-      gas: 2e5
-    });
-    // Deploy the token logic contracts
-    const computeInstance = () => {
-      switch (s.__type) {
-        case "RegD": {
-          if (this.st.contracts.regD === null) {
-            throw Error("We need an instance of TheRegD506c!");
-          }
-          return this.w3.eth
-            .contract(ABI.ARegD506cToken.abi)
-            .new(
-              s.isFund,
-              s.issuer,
-              this.st.contracts.regD,
-              this.st.contracts.capTables,
-              sid,
-              {
-                data: ABI.ARegD506cToken.bytecode,
-                from: this.controller,
-                gas: 4e5
-              }
-            );
-        }
-        case "RegS": {
-          if (this.st.contracts.regS === null) {
-            throw Error("We need an instance of TheRegS!");
-          }
-          return this.w3.eth
-            .contract(ABI.ARegSToken.abi)
-            .new(
-              s.issuer,
-              this.st.contracts.regS,
-              this.st.contracts.capTables,
-              sid,
-              { data: ABI.ARegSToken.bytecode, from: this.controller, gas: 4e5 }
-            );
-        }
-      }
-    };
-    const T = computeInstance();
-    // Configure the cap table
-    await Promise.all(
-      s.investors.map(inv => {
-        T.transferFrom(this.controller, inv.address, inv.amount, {
-          from: this.controller
-        });
-      })
+    const res = await issue(
+      security,
+      this.st.contracts,
+      this.controller,
+      this.w3
     );
     this.st.securities.push({
-      currentLogic: T.address,
-      id: sid,
-      name: s.metadata.name
+      currentLogic: res.token,
+      id: res.securityId,
+      name: security.metadata.name
     });
-    return {
-      securityId: sid,
-      token: T.address
-    };
+    return res;
   }
 
   /**
@@ -272,11 +121,7 @@ export class Client {
     if (this.capTables === null) {
       throw MissingCapTables;
     }
-    const tokenAddress = await this.capTables.addresses.call(sid);
-    const mgrt = new SolidityFunction(this.w3.eth, migrateABI, tokenAddress);
-    await mgrt.sendTransaction(newLogic, {
-      from: administrator
-    });
+    migrate(sid, newLogic, administrator, this.capTables, this.w3);
   }
 
   /**
@@ -305,10 +150,9 @@ export class Client {
    */
   public async setupExporter(
     id: SecurityId,
-    controller: Address,
     configureToken: (exporter: Address) => Promise<Address>
-  ): Promise<void> {
-    return;
+  ): Promise<Address> {
+    return setupExporter(id, configureToken, this.controller, this.w3);
   }
 
   /**
@@ -323,8 +167,8 @@ export class Client {
   public async setupImporter(
     srcToken: Address,
     configureToken: () => Promise<Address>
-  ): Promise<void> {
-    return;
+  ): Promise<{ securityId: SecurityId; token: Address }> {
+    return setupImporter(srcToken, configureToken, this.controller, this.w3);
   }
 
   /**
