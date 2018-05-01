@@ -13,14 +13,14 @@ import "./zeppelin-solidity/contracts/math/SafeMath.sol";
 contract BasicTokenLogic is ERC20Basic {
   using SafeMath for uint256;
 
-  address capTables;
+  address public capTables;
 
   /**
   * @Dev Index of this security in the global cap table store.
   */
-  uint256 index;
+  uint256 public index;
 
-  uint256 totalSupply_;
+  uint256 public totalSupply_;
 
   /**
   * @dev total number of tokens in existence
