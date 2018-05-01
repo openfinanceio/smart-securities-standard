@@ -1,5 +1,8 @@
-import { Security, Client } from "../src/S3";
+import { ABI } from "../src/Contracts";
+import { Client } from "../src/S3";
+import { Security } from "../src/Types";
 
+import * as assert from "assert";
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
 
@@ -19,12 +22,36 @@ describe("initialize S3", () => {
     const s3 = new Client(controller, null, provider);
     await s3.initS3();
   });
+  it("should set up a user checker", async () => {
+    const s3 = new Client(controller, null, provider);
+    await s3.initS3();
+    await s3.initUserChecker([]);
+  });
+  // Currently the point of this test is to exercise the issuance procedure
   it("should issue a security", async () => {
     const s3 = new Client(controller, null, provider);
     await s3.initS3();
+
+    const amlKycAddr = await s3.initUserChecker([checkers.amlKyc]);
+    const AK = web3.eth.contract(ABI.SimpleUserChecker.abi).at(amlKycAddr);
+    await AK.confirmUser(investor1, 0x1, { from: checkers.amlKyc });
+    await AK.confirmUser(investor2, 0x2, { from: checkers.amlKyc });
+
+    const accreditationAddr = await s3.initUserChecker([
+      checkers.accreditation
+    ]);
+    const AC = web3.eth
+      .contract(ABI.SimpleUserChecker.abi)
+      .at(accreditationAddr);
+    await AC.confirmUser(investor1, 0x3, { from: checkers.accreditation });
+    await AC.confirmUser(investor2, 0x4, { from: checkers.accreditation });
+
     const security: Security = {
       __type: "RegD",
-      checkers,
+      checkers: {
+        amlKyc: amlKycAddr,
+        accreditation: accreditationAddr
+      },
       investors: [
         {
           address: investor1,
@@ -41,6 +68,10 @@ describe("initialize S3", () => {
       owner: securityOwner
     };
     const result = await s3.issue(security);
-    console.log(result);
-  });
+    const T = web3.eth.contract(ABI.ARegD506cToken.abi).at(result.token);
+    const bal1 = await T.balanceOf.call(investor1);
+    const bal2 = await T.balanceOf.call(investor2);
+    assert.equal(bal1.toNumber(), security.investors[0].amount.toNumber());
+    assert.equal(bal2.toNumber(), security.investors[1].amount.toNumber());
+  }).timeout(15000);
 });
