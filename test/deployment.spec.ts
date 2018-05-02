@@ -70,7 +70,7 @@ describe("initialize S3", () => {
       owner: securityOwner
     };
     const result = await s3.issue(security);
-    const T = web3.eth.contract(ABI.ARegD506cToken.abi).at(result.token);
+    const T = web3.eth.contract(ABI.ARegD506cToken.abi).at(result.front);
     const bal1 = T.balanceOf.call(investor1);
     const bal2 = T.balanceOf.call(investor2);
     assert.equal(bal1.toNumber(), security.investors[0].amount.toNumber());

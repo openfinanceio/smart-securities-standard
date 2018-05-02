@@ -6,6 +6,7 @@ import * as ImporterABI from "../build/Importer.json";
 import * as SimpleUserCheckerABI from "../build/SimpleUserChecker.json";
 import * as TheRegD506cABI from "../build/TheRegD506c.json";
 import * as TheRegSABI from "../build/TheRegS.json";
+import * as TokenFrontABI from "../build/TokenFront.json";
 
 import * as ZRX from "@0xproject/types";
 import BigNumber from "bignumber.js";
@@ -24,6 +25,7 @@ export namespace ABI {
   export const SimpleUserChecker = (SimpleUserCheckerABI as any) as Artifact;
   export const TheRegD506c = (TheRegD506cABI as any) as Artifact;
   export const TheRegS = (TheRegSABI as any) as Artifact;
+  export const TokenFront = (TokenFrontABI as any) as Artifact;
 }
 
 /* INTERFACES */

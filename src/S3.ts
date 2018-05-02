@@ -90,7 +90,7 @@ export class Client {
    */
   public async issue(
     security: Security
-  ): Promise<{ securityId: SecurityId; token: Address }> {
+  ): Promise<{ securityId: SecurityId; coordinator: Address; front: Address }> {
     if (this.capTables === null) {
       this.initClient();
     }
@@ -101,7 +101,8 @@ export class Client {
       this.w3
     );
     this.st.securities.push({
-      currentLogic: res.token,
+      front: res.front,
+      currentLogic: res.coordinator,
       id: res.securityId,
       name: security.metadata.name
     });

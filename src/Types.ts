@@ -43,7 +43,8 @@ export interface S3Contracts {
 }
 
 export interface S3Metadata {
-  currentLogic: string;
+  front: Address;
+  currentLogic: Address;
   id: SecurityId;
   name: string;
 }

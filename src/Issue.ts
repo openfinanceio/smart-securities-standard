@@ -11,101 +11,139 @@ export async function issue(
   contracts: S3Contracts,
   controller: Address,
   web3: Web3
-): Promise<{ securityId: SecurityId; token: Address }> {
+): Promise<{ securityId: SecurityId; coordinator: Address; front: Address }> {
   // Compute the total supply
   const supply: BigNumber = security.investors.reduce(
     (s, x) => s.plus(x.amount),
     new BigNumber(0)
   );
   // Deploy the token logic contracts
-  function computeInstance(): Promise<Web3.ContractInstance> {
-    return new Promise(resolve => {
-      switch (security.__type) {
-        case "RegD": {
-          if (contracts.regD === null) {
-            throw Error("We need an instance of TheRegD506c!");
+  function deploy(): Promise<[Address, Web3.ContractInstance]> {
+    console.log("deploying");
+    const createFront = new Promise((resolve, reject) => {
+      console.log("creating front");
+      web3.eth.contract(ABI.TokenFront.abi).new(
+        {
+          data: ABI.TokenFront.bytecode,
+          from: controller,
+          gas: 7e5
+        },
+        (err: Error, instance: Web3.ContractInstance) => {
+          if (!_.isNull(err)) {
+            reject(err);
           }
-          web3.eth.contract(ABI.ARegD506cToken.abi).new(
-            supply,
-            security.isFund,
-            security.issuer,
-            contracts.regD,
-            contracts.capTables,
-            {
-              data: ABI.ARegD506cToken.bytecode,
-              from: controller,
-              gas: 2e6
-            },
-            (err: Error, instance: Web3.ContractInstance) => {
-              if (!_.isNull(instance) && !_.isUndefined(instance.address)) {
-                // Register the checkers
-                const regDAddr = contracts.regD as string;
-                const regD = web3.eth
-                  .contract(ABI.TheRegD506c.abi)
-                  .at(regDAddr);
-                regD.registerAmlKycChecker(
-                  security.checkers.amlKyc,
-                  instance.address,
-                  {
-                    from: security.issuer,
-                    gas: 1e5
-                  }
-                );
-                regD.registerAccreditationChecker(
-                  security.checkers.accreditation,
-                  instance.address,
-                  {
-                    from: security.issuer,
-                    gas: 1e5
-                  }
-                );
-                resolve(instance);
-              }
-            }
-          );
-          break;
+          if (!_.isUndefined(instance.address)) {
+            console.log(instance.address);
+            resolve(instance);
+          }
         }
-        case "RegS": {
-          if (contracts.regS === null) {
-            throw Error("We need an instance of TheRegS!");
-          }
-          web3.eth
-            .contract(ABI.ARegSToken.abi)
-            .new(
+      );
+    }) as Promise<Web3.ContractInstance>;
+    const createCoordinator = (front: Web3.ContractInstance) =>
+      new Promise((resolve, reject) => {
+        console.log("creating coordinator");
+        switch (security.__type) {
+          case "RegD": {
+            if (contracts.regD === null) {
+              throw Error("We need an instance of TheRegD506c!");
+            }
+            web3.eth.contract(ABI.ARegD506cToken.abi).new(
               supply,
+              security.isFund,
               security.issuer,
-              contracts.regS,
+              contracts.regD,
               contracts.capTables,
-              { data: ABI.ARegSToken.bytecode, from: controller, gas: 4e5 },
+              {
+                data: ABI.ARegD506cToken.bytecode,
+                from: controller,
+                gas: 2e6
+              },
               (err: Error, instance: Web3.ContractInstance) => {
-                if (!_.isNull(instance) && !_.isUndefined(instance.address)) {
-                  const regSAddr = contracts.regS as string;
-                  const regS = web3.eth.contract(ABI.TheRegS.abi).at(regSAddr);
-                  regS.registerAmlKycChecker(
+                if (!_.isNull(err)) {
+                  reject(err);
+                }
+                if (!_.isUndefined(instance.address)) {
+                  // Register the checkers
+                  console.log(instance);
+                  const regDAddr = contracts.regD as string;
+                  const regD = web3.eth
+                    .contract(ABI.TheRegD506c.abi)
+                    .at(regDAddr);
+                  regD.registerAmlKycChecker(
                     security.checkers.amlKyc,
                     instance.address,
                     {
-                      from: controller,
+                      from: security.issuer,
                       gas: 1e5
                     }
                   );
-                  regS.registerResidencyChecker(
-                    security.checkers.residency,
+                  regD.registerAccreditationChecker(
+                    security.checkers.accreditation,
                     instance.address,
                     {
-                      from: controller,
+                      from: security.issuer,
                       gas: 1e5
                     }
                   );
-                  resolve(instance);
+                  console.log(front);
+                  front.migrate(instance.address, { from: controller });
+                  instance.setFront(front.address, { from: controller });
+                  resolve([front.address, instance]);
                 }
               }
             );
+            break;
+          }
+          case "RegS": {
+            if (contracts.regS === null) {
+              throw Error("We need an instance of TheRegS!");
+            }
+            web3.eth
+              .contract(ABI.ARegSToken.abi)
+              .new(
+                supply,
+                security.issuer,
+                contracts.regS,
+                contracts.capTables,
+                { data: ABI.ARegSToken.bytecode, from: controller, gas: 4e5 },
+                (err: Error, instance: Web3.ContractInstance) => {
+                  if (!_.isNull(err)) {
+                    reject(err);
+                  }
+                  if (!_.isUndefined(instance.address)) {
+                    const regSAddr = contracts.regS as string;
+                    const regS = web3.eth
+                      .contract(ABI.TheRegS.abi)
+                      .at(regSAddr);
+                    regS.registerAmlKycChecker(
+                      security.checkers.amlKyc,
+                      instance.address,
+                      {
+                        from: controller,
+                        gas: 1e5
+                      }
+                    );
+                    regS.registerResidencyChecker(
+                      security.checkers.residency,
+                      instance.address,
+                      {
+                        from: controller,
+                        gas: 1e5
+                      }
+                    );
+                    front.migrate(instance.address, { from: controller });
+                    instance.setFront(front.address, { from: controller });
+                    resolve([front.address, instance]);
+                  }
+                }
+              );
+          }
         }
-      }
-    });
+      }) as Promise<[Address, Web3.ContractInstance]>;
+    return createFront.then(createCoordinator);
   }
-  const T = await computeInstance();
+  const [frontAddress, T] = await deploy();
+  console.log(frontAddress, T);
   const tokenAddress = T.address;
   const sid: BigNumber = T.index.call();
   // Configure the cap table
@@ -141,7 +179,8 @@ export async function issue(
     T.issue({ from: security.issuer });
   }
   return {
-    securityId: sid,
-    token: tokenAddress
+    coordinator: tokenAddress,
+    front: frontAddress,
+    securityId: sid
   };
 }
