@@ -36,6 +36,7 @@ describe("initialize S3", () => {
     const AK = web3.eth.contract(ABI.SimpleUserChecker.abi).at(amlKycAddr);
     await AK.confirmUser(investor1, 0x1, { from: checkers.amlKyc });
     await AK.confirmUser(investor2, 0x2, { from: checkers.amlKyc });
+    await AK.confirmUser(controller, 0x01, { from: checkers.amlKyc });
 
     const accreditationAddr = await s3.initUserChecker([
       checkers.accreditation
@@ -45,6 +46,7 @@ describe("initialize S3", () => {
       .at(accreditationAddr);
     await AC.confirmUser(investor1, 0x3, { from: checkers.accreditation });
     await AC.confirmUser(investor2, 0x4, { from: checkers.accreditation });
+    await AC.confirmUser(controller, 0x02, { from: checkers.accreditation });
 
     const security: Security = {
       __type: "RegD",
@@ -69,8 +71,8 @@ describe("initialize S3", () => {
     };
     const result = await s3.issue(security);
     const T = web3.eth.contract(ABI.ARegD506cToken.abi).at(result.token);
-    const bal1 = await T.balanceOf.call(investor1);
-    const bal2 = await T.balanceOf.call(investor2);
+    const bal1 = T.balanceOf.call(investor1);
+    const bal2 = T.balanceOf.call(investor2);
     assert.equal(bal1.toNumber(), security.investors[0].amount.toNumber());
     assert.equal(bal2.toNumber(), security.investors[1].amount.toNumber());
   }).timeout(15000);
