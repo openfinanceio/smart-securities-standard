@@ -3,11 +3,10 @@ pragma solidity ^0.4.18;
 import './RegS.sol';
 import './RegSToken.sol';
 import './RestrictedTokenLogic.sol';
-import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 ///
 /// @title A token that tracks data relevant for Reg S status;
-contract ARegSToken is RegSToken, RestrictedTokenLogic, Ownable {
+contract ARegSToken is RegSToken, RestrictedTokenLogic {
 
 
   ///
@@ -22,6 +21,7 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic, Ownable {
     address capTables_
   )
     public
+    Ownable()
   {
     totalSupply_ = supply; 
     restrictor = restrictor_;
@@ -57,11 +57,11 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic, Ownable {
   }
 
   /// Manage shareholder count after transfer
-  function transfer(address _to, uint256 _value) public returns (bool) {
+  function transfer(address _to, uint256 _value, address sender) public returns (bool) {
 
     uint16 newCount = shareholderCountAfter(msg.sender, _to, _value);
 
-    super.transfer(_to, _value);
+    super.transfer(_to, _value, sender);
 
     if (shareholderCount != newCount)
       shareholderCount = newCount;
@@ -72,14 +72,14 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic, Ownable {
 
   ///
   /// Manage shareholder count after delegated transfer
-  function transferFrom(address _from, address _to, uint256 _value)
+  function transferFrom(address _from, address _to, uint256 _value, address sender)
     public
     returns (bool)
   {
 
     uint16 newCount = shareholderCountAfter(_from, _to, _value);
 
-    super.transferFrom(_from, _to, _value);
+    super.transferFrom(_from, _to, _value, sender);
 
     if (shareholderCount != newCount)
       shareholderCount = newCount;

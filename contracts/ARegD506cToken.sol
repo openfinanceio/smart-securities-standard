@@ -4,11 +4,10 @@ pragma solidity ^0.4.10;
 import './RegD506c.sol';
 import './RegD506cToken.sol';
 import './RestrictedTokenLogic.sol';
-import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 ///
 /// @title A token that tracks data relevant for Reg D 506 c status
-contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic, Ownable {
+contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
 
   ///
   /// Is the token being used to raise capital for a fund?
@@ -29,6 +28,7 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic, Ownable {
     address capTables_
   )
     public
+    Ownable()
   {
     totalSupply_ = supply; 
     isFund = isFund_;
@@ -73,11 +73,14 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic, Ownable {
   
   ///
   /// Manage shareholder count after transfer
-  function transfer(address _to, uint256 _value) public returns (bool) {
+  function transfer(address _to, uint256 _value, address sender) 
+    public 
+    returns (bool) 
+  {
     
     uint16 newCount = shareholderCountAfter(msg.sender, _to, _value);
 
-    super.transfer(_to, _value);
+    super.transfer(_to, _value, sender);
     
     if (shareholderCount != newCount)
       shareholderCount = newCount;
@@ -88,14 +91,14 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic, Ownable {
 
   ///
   /// Manage shareholder count after delegated transfer
-  function transferFrom(address _from, address _to, uint256 _value)
+  function transferFrom(address _from, address _to, uint256 _value, address sender)
     public
     returns (bool)
   {
 
     uint16 newCount = shareholderCountAfter(_from, _to, _value);
 
-    super.transferFrom(_from, _to, _value);
+    super.transferFrom(_from, _to, _value, sender);
 
     if (shareholderCount != newCount)
       shareholderCount = newCount;

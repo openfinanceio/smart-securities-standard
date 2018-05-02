@@ -25,16 +25,16 @@ contract RestrictedTokenLogic is StandardTokenLogic {
 
   ///
   /// Simple implementation of restricted transfers
-  function transfer(address to, uint256 value) 
+  function transfer(address to, uint256 value, address sender) 
     public
     returns (bool)
   {
 
-    uint16 res = TransferRestrictor(restrictor).test(msg.sender, to, value, this);
+    uint16 res = TransferRestrictor(restrictor).test(sender, to, value, this);
     if (res == 0) {
-      return super.transfer(to, value);
+      return super.transfer(to, value, sender);
     } else {
-      emit TransferError(this, msg.sender, to, value, res);
+      emit TransferError(this, sender, to, value, res);
       return false;
     }
 
@@ -42,14 +42,14 @@ contract RestrictedTokenLogic is StandardTokenLogic {
 
   ///
   /// Simple implementation of restricted delegated transfers
-  function transferFrom(address from, address to, uint256 value)
+  function transferFrom(address from, address to, uint256 value, address sender)
     public
     returns (bool)
   {
 
     uint16 res = TransferRestrictor(restrictor).test(from, to, value, this);
     if (res == 0) {
-      return super.transferFrom(from, to, value);
+      return super.transferFrom(from, to, value, sender);
     } else {
       emit TransferError(this, from, to, value, res);
       return false;
