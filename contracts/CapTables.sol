@@ -35,10 +35,10 @@ contract CapTables is IndexConsumer {
   }
 
   /** @dev Add a security to the contract. */
-  function initialize(uint256 supply, address holder) public returns (uint256) {
+  function initialize(uint256 supply, address manager) public returns (uint256) {
     uint256 index = nextIndex();
-    addresses[index] = holder;
-    capTable[index][holder] = supply;
+    addresses[index] = manager;
+    capTable[index][manager] = supply;
     totalSupply[index] = supply;
     emit NewSecurity(index);
     return index;
@@ -55,7 +55,7 @@ contract CapTables is IndexConsumer {
   function transfer(uint256 security, address src, address dest, uint256 amount) public {
     require(msg.sender == addresses[security]);
     require(capTable[security][src] >= amount);
-    capTable[security][src].sub(amount);
-    capTable[security][dest].add(amount);
+    capTable[security][src] = capTable[security][src].sub(amount);
+    capTable[security][dest] = capTable[security][dest].add(amount);
   }
 }

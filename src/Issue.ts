@@ -106,19 +106,42 @@ export async function issue(
     });
   }
   const T = await computeInstance();
+  const tokenAddress = T.address;
+  const sid: BigNumber = T.index.call();
   // Configure the cap table
+  const capTablesAddr = contracts.capTables as string;
+  const CT = web3.eth.contract(ABI.CapTables.abi).at(capTablesAddr);
   console.log("Doing distribution");
   await Promise.all(
     security.investors.map(inv => {
       console.log(`${inv.address} gets ${inv.amount.toString()}`);
-      return T.transferFrom(controller, inv.address, inv.amount, {
-        from: controller
-      });
+      return new Promise((resolve, reject) =>
+        CT.transfer(
+          sid,
+          controller,
+          inv.address,
+          inv.amount,
+          {
+            from: controller
+          },
+          (err: Error, hash: string) => {
+            if (!_.isNull(err)) {
+              reject(err);
+            } else {
+              resolve(hash);
+            }
+          }
+        )
+      );
     })
   );
-  const sid: BigNumber = await T.index.call();
+  // Move control of the cap table to the token
+  CT.migrate(sid, tokenAddress, { from: controller });
+  if (security.__type == "RegD") {
+    T.issue({ from: security.issuer });
+  }
   return {
     securityId: sid,
-    token: T.address
+    token: tokenAddress
   };
 }
