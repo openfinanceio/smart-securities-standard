@@ -39,10 +39,10 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic {
 
   /// After 12 months a RegS security may be converted to a Reg D security if
   //it meets the requirements, so we track the number of shareholders.
-  function shareholderCountAfter(address _from, address _to, uint256 _value)
+  function query(address _from, address _to, uint256 _value)
     public
     view
-    returns (uint16)
+    returns (uint16 nShareholdersAfter)
   {
     bool newShareholder = balanceOf(_to) == 0;
     bool loseShareholder = balanceOf(_from) == _value;
@@ -59,7 +59,7 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic {
   /// Manage shareholder count after transfer
   function transfer(address _to, uint256 _value, address sender) public returns (bool) {
 
-    uint16 newCount = shareholderCountAfter(msg.sender, _to, _value);
+    uint16 newCount = query(msg.sender, _to, _value);
 
     super.transfer(_to, _value, sender);
 
@@ -77,7 +77,7 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic {
     returns (bool)
   {
 
-    uint16 newCount = shareholderCountAfter(_from, _to, _value);
+    uint16 newCount = query(_from, _to, _value);
 
     super.transferFrom(_from, _to, _value, sender);
 

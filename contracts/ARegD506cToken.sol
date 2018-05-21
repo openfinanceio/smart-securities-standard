@@ -53,21 +53,21 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
     ICapTables(capTables).migrate(index, newRules);
   }
 
-  function shareholderCountAfter(address _from, address _to, uint256 _value) 
+  function query(address _from, address _to, uint256 _value) 
     public
     view
-    returns (uint16)
+    returns (uint16 nShareholdersAfter, bool _isFund)
   {
     bool newShareholder = balanceOf(_to) == 0;
     bool loseShareholder = balanceOf(_from) == _value;
 
     if (newShareholder && !loseShareholder) 
-      return shareholderCount + 1;
+      return (shareholderCount + 1, isFund);
 
     if (!newShareholder && loseShareholder)
-      return shareholderCount - 1;
+      return (shareholderCount - 1, isFund);
 
-    return shareholderCount;
+    return (shareholderCount, isFund);
    
   }
   
@@ -78,7 +78,7 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
     returns (bool) 
   {
     
-    uint16 newCount = shareholderCountAfter(msg.sender, _to, _value);
+    (uint16 newCount,) = query(msg.sender, _to, _value);
 
     super.transfer(_to, _value, sender);
     
@@ -96,7 +96,7 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
     returns (bool)
   {
 
-    uint16 newCount = shareholderCountAfter(_from, _to, _value);
+    (uint16 newCount,) = query(_from, _to, _value);
 
     super.transferFrom(_from, _to, _value, sender);
 

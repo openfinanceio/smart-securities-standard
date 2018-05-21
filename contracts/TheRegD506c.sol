@@ -83,8 +83,8 @@ contract TheRegD506c is RegD506c, Ownable() {
 
     // Shareholder limits
     // 99 if the security is raising money for a fund and 2000 otherwise
-    uint16 newShareholderCount = RegD506cToken(_token).shareholderCountAfter(_from, _to, _value);
-    if ((RegD506cToken(_token).isFund() && newShareholderCount > 99) 
+    (uint16 newShareholderCount, bool isFund) = RegD506cToken(_token).query(_from, _to, _value);
+    if ((isFund && newShareholderCount > 99) 
       || newShareholderCount > 2000)
       return uint16(ErrorCode.ShareholderMaximum);
 
