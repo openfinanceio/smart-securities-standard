@@ -1,12 +1,12 @@
 pragma solidity ^0.4.10;
 
-import './RegS.sol';
-import './RegSToken.sol';
-import './UserChecker.sol';
+import './interfaces/RegS.sol';
+import './interfaces/RegSToken.sol';
+import './interfaces/UserChecker.sol';
 import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 /// @title Implementation of RegS
-contract TheRegS is RegS {
+contract TheRegS is RegS, TransferRestrictor {
 
   /// Table of AML-KYC checking contracts
   mapping(address => address) amlkycChecker;

@@ -1,8 +1,8 @@
 pragma solidity ^0.4.10;
 
 
-import './RegD506c.sol';
-import './RegD506cToken.sol';
+import './interfaces/RegD506c.sol';
+import './interfaces/RegD506cToken.sol';
 import './RestrictedTokenLogic.sol';
 
 ///

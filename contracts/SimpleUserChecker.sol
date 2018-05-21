@@ -1,7 +1,7 @@
 pragma solidity ^0.4.10;
 
 
-import './UserChecker.sol';
+import './interfaces/UserChecker.sol';
 import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 

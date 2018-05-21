@@ -2,7 +2,7 @@ pragma solidity ^0.4.17;
 
 
 import './DelegatedTokenLogic.sol';
-import './TransferRestrictor.sol';
+import './interfaces/TransferRestrictor.sol';
 
 
 ///

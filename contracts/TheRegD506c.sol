@@ -1,15 +1,15 @@
 pragma solidity ^0.4.10;
 
 
-import './RegD506c.sol';
-import './RegD506cToken.sol';
-import './UserChecker.sol';
+import './interfaces/RegD506c.sol';
+import './interfaces/RegD506cToken.sol';
+import './interfaces/UserChecker.sol';
 import './zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 
 ///
 /// @title Implementation of RegD506c
-contract TheRegD506c is RegD506c, Ownable() {
+contract TheRegD506c is RegD506c, TransferRestrictor, Ownable() {
 
   ///
   /// Table of AML-KYC checking contracts

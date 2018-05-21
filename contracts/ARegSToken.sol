@@ -1,7 +1,7 @@
 pragma solidity ^0.4.18;
 
-import './RegS.sol';
-import './RegSToken.sol';
+import './interfaces/RegS.sol';
+import './interfaces/RegSToken.sol';
 import './RestrictedTokenLogic.sol';
 
 ///
