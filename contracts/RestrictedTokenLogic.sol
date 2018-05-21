@@ -1,13 +1,13 @@
 pragma solidity ^0.4.17;
 
 
-import './StandardTokenLogic.sol';
+import './DelegatedTokenLogic.sol';
 import './TransferRestrictor.sol';
 
 
 ///
 /// @title RestrictedToken is a token with support for flexible rule-checking
-contract RestrictedTokenLogic is StandardTokenLogic {
+contract RestrictedTokenLogic is DelegatedTokenLogic {
 
   address restrictor;
 

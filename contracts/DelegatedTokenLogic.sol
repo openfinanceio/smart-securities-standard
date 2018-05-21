@@ -1,7 +1,7 @@
 // Variation on `StandardToken` by Open Zeppelin
 pragma solidity ^0.4.18;
 
-import { DelegatedERC20 } from "./DelegatedERC20.sol";
+import { DelegatedERC20 } from "./interfaces/DelegatedERC20.sol";
 import { ICapTables } from "./interfaces/ICapTables.sol";
 import { SafeMath } from "./zeppelin-solidity/contracts/math/SafeMath.sol";
 import { Ownable } from "./zeppelin-solidity/contracts/ownership/Ownable.sol";
@@ -9,7 +9,7 @@ import { Ownable } from "./zeppelin-solidity/contracts/ownership/Ownable.sol";
 /**
  * @title StandardTokenLogic empty token
  */
-contract StandardTokenLogic is DelegatedERC20, Ownable {
+contract DelegatedTokenLogic is DelegatedERC20, Ownable {
   using SafeMath for uint256;
 
   address public capTables;

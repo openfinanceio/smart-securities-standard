@@ -1,6 +1,6 @@
 pragma solidity ^0.4.10;
 
-import { DelegatedERC20 } from "./DelegatedERC20.sol";
+import { DelegatedERC20 } from "./interfaces/DelegatedERC20.sol";
 
 import { ERC20 } from "./zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import { Ownable } from "./zeppelin-solidity/contracts/ownership/Ownable.sol";
@@ -12,6 +12,12 @@ import { Ownable } from "./zeppelin-solidity/contracts/ownership/Ownable.sol";
  */
 contract TokenFront is ERC20, Ownable {
   DelegatedERC20 public tokenLogic;
+  constructor(DelegatedERC20 initialTokenLogic) 
+    public
+    Ownable() 
+  {
+    tokenLogic = initialTokenLogic;
+  }
   function migrate(DelegatedERC20 newTokenLogic) public onlyOwner
   {
     tokenLogic = newTokenLogic;
