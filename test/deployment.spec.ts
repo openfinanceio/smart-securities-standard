@@ -20,12 +20,22 @@ describe("initialize S3", () => {
   const securityOwner = web3.eth.accounts[6];
   it("should set up a new S3 framework", async () => {
     const s3 = new Client(controller, null, provider);
-    await s3.initS3();
+    const contracts = await s3.initS3();
+    assert(
+      Web3.isAddress(contracts.capTables),
+      "capTables should be a valid address"
+    );
+    assert(Web3.isAddress(contracts.regD), "regD should be an address");
+    assert(Web3.isAddress(contracts.regS), "regS should be an address");
   });
   it("should set up a user checker", async () => {
     const s3 = new Client(controller, null, provider);
     await s3.initS3();
-    await s3.initUserChecker([]);
+    const userChecker = await s3.initUserChecker([]);
+    assert(
+      Web3.isAddress(userChecker),
+      "userChecker should be a valid address"
+    );
   });
   // Currently the point of this test is to exercise the issuance procedure
   it("should issue a security", async () => {
