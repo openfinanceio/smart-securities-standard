@@ -7,9 +7,9 @@ import { SafeMath } from "./zeppelin-solidity/contracts/math/SafeMath.sol";
 import { Ownable } from "./zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 /**
- * @title StandardTokenLogic empty token
+ * @title DelegatedTokenLogic empty token
  */
-contract DelegatedTokenLogic is DelegatedERC20, Ownable {
+contract DelegatedTokenLogic is DelegatedERC20, Ownable() {
   using SafeMath for uint256;
 
   address public capTables;
