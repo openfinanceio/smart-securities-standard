@@ -22,18 +22,18 @@ describe("initialize S3", () => {
     const s3 = new Client(controller, null, provider);
     const contracts = await s3.initS3();
     assert(
-      Web3.isAddress(contracts.capTables),
+      contracts.capTables !== null && web3.isAddress(contracts.capTables),
       "capTables should be a valid address"
     );
-    assert(Web3.isAddress(contracts.regD), "regD should be an address");
-    assert(Web3.isAddress(contracts.regS), "regS should be an address");
+    assert(contracts.regD !== null && web3.isAddress(contracts.regD), "regD should be an address");
+    assert(contracts.regS !== null && web3.isAddress(contracts.regS), "regS should be an address");
   });
   it("should set up a user checker", async () => {
     const s3 = new Client(controller, null, provider);
     await s3.initS3();
     const userChecker = await s3.initUserChecker([]);
     assert(
-      Web3.isAddress(userChecker),
+      web3.isAddress(userChecker),
       "userChecker should be a valid address"
     );
   });
