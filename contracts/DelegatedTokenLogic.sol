@@ -9,7 +9,7 @@ import { Ownable } from "./zeppelin-solidity/contracts/ownership/Ownable.sol";
 /**
  * @title DelegatedTokenLogic empty token
  */
-contract DelegatedTokenLogic is DelegatedERC20, Ownable() {
+contract DelegatedTokenLogic is Ownable, DelegatedERC20 {
   using SafeMath for uint256;
 
   address public capTables;
@@ -98,7 +98,7 @@ contract DelegatedTokenLogic is DelegatedERC20, Ownable() {
    * @param _spender The address which will spend the funds.
    * @param _value The amount of tokens to be spent.
    */
-  function approve(address _spender, uint256 _value, address, address sender) 
+  function approve(address _spender, uint256 _value, address sender) 
     public 
     onlyFront
     returns (bool) 
@@ -113,7 +113,7 @@ contract DelegatedTokenLogic is DelegatedERC20, Ownable() {
    * @param _spender address The address which will spend the funds.
    * @return A uint256 specifying the amount of tokens still available for the spender.
    */
-  function allowance(address _owner, address _spender) public view returns (uint256) {
+  function allowance(address _owner, address _spender, address sender) public view returns (uint256) {
     return allowed[_owner][_spender];
   }
 

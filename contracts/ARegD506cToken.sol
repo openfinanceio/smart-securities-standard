@@ -23,19 +23,17 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
   constructor(
     uint256 supply,
     bool isFund_, 
-    address issuer,
     address restrictor_,
     address capTables_
   )
     public
-    Ownable()
   {
     totalSupply_ = supply; 
     isFund = isFund_;
-    owner = issuer;
 
     restrictor = restrictor_;
     capTables = capTables_;
+    owner = msg.sender;
 
     // Create the cap table
     index = ICapTables(capTables).initialize(supply, msg.sender);
@@ -58,8 +56,8 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
     view
     returns (uint16 nShareholdersAfter, bool _isFund)
   {
-    bool newShareholder = balanceOf(_to) == 0;
-    bool loseShareholder = balanceOf(_from) == _value;
+    bool newShareholder = this.balanceOf(_to) == 0;
+    bool loseShareholder = this.balanceOf(_from) == _value;
 
     if (newShareholder && !loseShareholder) 
       return (shareholderCount + 1, isFund);

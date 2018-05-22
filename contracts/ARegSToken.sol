@@ -16,16 +16,14 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic {
 
   constructor(
     uint256 supply,
-    address issuer, 
     address restrictor_, 
     address capTables_
   )
     public
-    Ownable()
   {
     totalSupply_ = supply; 
     restrictor = restrictor_;
-    owner = issuer;
+    owner = msg.sender;
 
     capTables = capTables_;
     index = ICapTables(capTables).initialize(supply, msg.sender);
