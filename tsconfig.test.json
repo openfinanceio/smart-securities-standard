@@ -10,7 +10,7 @@
     "noImplicitReturns": true,
     "noImplicitThis": true,
     "noUnusedLocals": true,
-    "outDir": "./dist",
+    "outDir": "./dist-test",
     "rootDir": ".",
     "sourceMap": true,
     "strictNullChecks": true,

@@ -40,7 +40,7 @@ describe("initialize S3", () => {
   // Currently the point of this test is to exercise the issuance procedure
   it("should issue a security", async () => {
     const s3 = new Client(controller, null, provider);
-    await s3.initS3();
+    const s3Contracts = await s3.initS3();
 
     const amlKycAddr = await s3.initUserChecker([checkers.amlKyc]);
     const AK = web3.eth.contract(ABI.SimpleUserChecker.abi).at(amlKycAddr);
@@ -80,10 +80,18 @@ describe("initialize S3", () => {
       owner: securityOwner
     };
     const result = await s3.issue(security);
-    const T = web3.eth.contract(ABI.ARegD506cToken.abi).at(result.front);
+    const T = web3.eth.contract(ABI.TokenFront.abi).at(result.front);
+    // Check balances
     const bal1 = T.balanceOf.call(investor1);
     const bal2 = T.balanceOf.call(investor2);
     assert.equal(bal1.toNumber(), security.investors[0].amount.toNumber());
     assert.equal(bal2.toNumber(), security.investors[1].amount.toNumber());
+    // Check the cap table
+    const capTableAddress = s3Contracts.capTables as string;
+    const CT = web3.eth.contract(ABI.CapTables.abi).at(capTableAddress);
+    const capTableBal1 = CT.balanceOf.call(result.securityId, investor1);
+    const capTableBal2 = CT.balanceOf.call(result.securityId, investor2);
+    assert.equal(capTableBal1.toNumber(), security.investors[0].amount.toNumber());
+    assert.equal(capTableBal2.toNumber(), security.investors[1].amount.toNumber());
   }).timeout(15000);
 });
