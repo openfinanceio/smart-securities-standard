@@ -1,3 +1,4 @@
+import { ABI } from "./Contracts";
 import { Address, SecurityId } from "./Types";
 
 import { SolidityFunction } from "web3/lib/web3/function";
@@ -44,10 +45,11 @@ export async function migrate(
   sid: SecurityId,
   newLogic: string,
   administrator: string,
-  capTables: Web3.ContractInstance,
+  capTables: Address,
   web3: Web3
 ): Promise<void> {
-  const tokenAddress = await capTables.addresses.call(sid);
+  const CT = web3.eth.contract(ABI.CapTables.abi).at(capTables);
+  const tokenAddress = await CT.addresses.call(sid);
   const mgrt = new SolidityFunction(web3.eth, migrateABI, tokenAddress);
   await mgrt.sendTransaction(newLogic, {
     from: administrator

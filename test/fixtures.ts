@@ -1,13 +1,42 @@
+import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
 
-export const roles = (web3: Web3) => ({
-  controller: web3.eth.accounts[0],
-  checkers: {
-    amlKyc: web3.eth.accounts[1],
-    accreditation: web3.eth.accounts[2]
-  },
-  investor1: web3.eth.accounts[3],
-  investor2: web3.eth.accounts[4],
-  issuer: web3.eth.accounts[5],
-  securityOwner: web3.eth.accounts[6]
-});
+import { RegD } from "../src/Types";
+
+export const environment = (web3: Web3) => {
+  const issuer = web3.eth.accounts[5];
+  const securityOwner = web3.eth.accounts[6];
+  return {
+    roles: {
+      controller: web3.eth.accounts[0],
+      checkers: {
+        amlKyc: web3.eth.accounts[1],
+        accreditation: web3.eth.accounts[2]
+      },
+      investor1: web3.eth.accounts[3],
+      investor2: web3.eth.accounts[4],
+      investor3: web3.eth.accounts[7],
+      issuer,
+      securityOwner
+    },
+    security: (
+      amlKycAddr: string,
+      accreditationAddr: string,
+      investors: { address: string; amount: BigNumber }[]
+    ) => {
+      const s: RegD = {
+        __type: "RegD",
+        checkers: {
+          amlKyc: amlKycAddr,
+          accreditation: accreditationAddr
+        },
+        investors,
+        isFund: false,
+        issuer,
+        metadata: { name: "Security1" },
+        owner: securityOwner
+      };
+      return s;
+    }
+  };
+};

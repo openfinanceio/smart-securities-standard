@@ -13,14 +13,13 @@ import {
 
 export interface State {
   chainHeight: number;
-  contracts: S3Contracts;
+  contracts: S3Contracts | null;
   securities: S3Metadata[];
 }
 
-export const MissingCapTables = Error("A CapTables instance is required!");
+export const MissingContracts = Error("Ecosystem contracts are not known!");
 
 export class Client {
-  private capTables: Web3.ContractInstance | null;
   private controller: Address;
   private st: State;
   private w3: Web3;
@@ -34,29 +33,9 @@ export class Client {
       // Assume that we are joining the network for the first time
       this.st = {
         chainHeight: 0,
-        contracts: {
-          capTables: null,
-          regD: null,
-          regS: null
-        },
+        contracts: null,
         securities: []
       };
-    }
-  }
-
-  /**
-   * Create a CapTables instance if possible.
-   */
-  public async initClient(): Promise<void> {
-    if (this.capTables !== null) {
-      throw Error("We already have a CapTables instance!");
-    }
-    if (this.st !== null && this.st.contracts.capTables !== null) {
-      this.capTables = await this.w3.eth
-        .contract(ABI.CapTables.abi)
-        .at(this.st.contracts.capTables);
-    } else {
-      throw Error("We need the address of a CapTables contract!");
     }
   }
 
@@ -66,12 +45,10 @@ export class Client {
    * @return the address of the deployed contract
    */
   public async initS3(): Promise<S3Contracts> {
-    const [cs, CT] = await Init.initS3(
-      this.w3,
-      this.st.contracts.capTables,
-      this.controller
-    );
-    this.capTables = CT;
+    if (this.st.contracts !== null) {
+      throw Error("We already have a cap tables contract!");
+    }
+    const cs = await Init.initS3(this.w3, this.controller);
     this.st.contracts = cs;
     return cs;
   }
@@ -84,6 +61,48 @@ export class Client {
   }
 
   /**
+   * Register an address to do KYC checking
+   */
+  public async registerForKyc(checkers: Address[]): Promise<void> {
+    if (this.st.contracts === null) {
+      throw Error("Not initialized");
+    }
+    await this.registerCheckers(checkers, this.st.contracts.kyc);
+  }
+
+  /**
+   * Register an address to do accreditation
+   */
+  public async registerForAccreditation(checkers: Address[]): Promise<void> {
+    if (this.st.contracts === null) {
+      throw MissingContracts;
+    }
+    await this.registerCheckers(checkers, this.st.contracts.accreditation);
+  }
+
+  /**
+   * Register an address for residency checking
+   */
+  public async registerForResidency(checkers: Address[]): Promise<void> {
+    if (this.st.contracts === null) {
+      throw MissingContracts;
+    }
+    await this.registerCheckers(checkers, this.st.contracts.residency);
+  }
+
+  private async registerCheckers(
+    checkers: Address[],
+    contractAddr: Address
+  ): Promise<void> {
+    const UC = this.w3.eth.contract(ABI.SimpleUserChecker.abi).at(contractAddr);
+    await Promise.all(
+      checkers.map(checker =>
+        UC.addChecker(checker, { from: this.controller, gas: 5e5 })
+      )
+    );
+  }
+
+  /**
    * Issue a security.
    * TODO:
    * - [ ] make the allocation more efficient (maybe using coupons)
@@ -91,8 +110,8 @@ export class Client {
   public async issue(
     security: Security
   ): Promise<{ securityId: SecurityId; coordinator: Address; front: Address }> {
-    if (this.capTables === null) {
-      this.initClient();
+    if (this.st.contracts === null) {
+      throw MissingContracts;
     }
     const res = await issue(
       security,
@@ -119,10 +138,16 @@ export class Client {
     newLogic: string,
     administrator: string
   ): Promise<void> {
-    if (this.capTables === null) {
-      throw MissingCapTables;
+    if (this.st.contracts === null) {
+      throw MissingContracts;
     }
-    migrate(sid, newLogic, administrator, this.capTables, this.w3);
+    await migrate(
+      sid,
+      newLogic,
+      administrator,
+      this.st.contracts.capTables,
+      this.w3
+    );
   }
 
   /**
@@ -130,8 +155,8 @@ export class Client {
    * of the CapTables contract as the security's ID.
    */
   public securityURI(sid: SecurityId): string {
-    if (this.st.contracts.capTables === null) {
-      throw MissingCapTables;
+    if (this.st.contracts === null) {
+      throw MissingContracts;
     }
     return `s3://${this.st.contracts.capTables.slice(2)}/${sid.toString()}`;
   }

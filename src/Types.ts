@@ -37,9 +37,12 @@ export interface BaseSecurity {
 }
 
 export interface S3Contracts {
-  capTables: Address | null;
-  regD: Address | null;
-  regS: Address | null;
+  capTables: Address;
+  regD: Address;
+  regS: Address;
+  kyc: Address;
+  accreditation: Address;
+  residency: Address;
 }
 
 export interface S3Metadata {

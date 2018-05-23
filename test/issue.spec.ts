@@ -10,7 +10,8 @@ import * as Web3 from "web3";
 
 const provider = new Web3.providers.HttpProvider("http://localhost:8545");
 const web3 = new Web3(provider);
-const roles = fixtures.roles(web3);
+const env = fixtures.environment(web3);
+const roles = env.roles;
 const controller = roles.controller;
 
 describe("initialize S3", () => {
@@ -66,27 +67,16 @@ describe("initialize S3", () => {
       from: roles.checkers.accreditation
     });
 
-    const security: Security = {
-      __type: "RegD",
-      checkers: {
-        amlKyc: amlKycAddr,
-        accreditation: accreditationAddr
+    const security: Security = env.security(amlKycAddr, accreditationAddr, [
+      {
+        address: roles.investor1,
+        amount: new BigNumber(1e6)
       },
-      investors: [
-        {
-          address: roles.investor1,
-          amount: new BigNumber("1e5")
-        },
-        {
-          address: roles.investor2,
-          amount: new BigNumber("2e4")
-        }
-      ],
-      isFund: false,
-      issuer: roles.issuer,
-      metadata: { name: "Security1" },
-      owner: roles.securityOwner
-    };
+      {
+        address: roles.investor2,
+        amount: new BigNumber(2e5)
+      }
+    ]);
     const result = await s3.issue(security);
     const T = web3.eth.contract(ABI.TokenFront.abi).at(result.front);
     // Check balances

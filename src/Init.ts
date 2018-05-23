@@ -1,64 +1,60 @@
-import { ABI } from "./Contracts";
+import { ABI, Artifact } from "./Contracts";
 import { Address, S3Contracts } from "./Types";
 
 import * as _ from "lodash";
 import * as Web3 from "web3";
 
-export function initS3(
+export async function initS3(
   this: void,
   web3: Web3,
-  capTables: string | null,
   controller: string
-): Promise<[S3Contracts, Web3.ContractInstance]> {
-  if (capTables !== null) {
-    throw Error("We already have a cap tables contract!");
-  }
-  return new Promise(resolve => {
-    const cs: S3Contracts = {
-      capTables: null,
-      regD: null,
-      regS: null
-    };
-    const finish = (cs: S3Contracts, CT: Web3.ContractInstance) => {
-      if (!(_.isNull(cs.capTables) || _.isNull(cs.regD) || _.isNull(cs.regS))) {
-        resolve([cs, CT]);
-      }
-    };
-    const CT = web3.eth.contract(ABI.CapTables.abi).new(
-      {
-        data: ABI.CapTables.bytecode,
-        from: controller,
-        gas: 5e5
-      },
-      (err: Error, contract: Web3.ContractInstance) => {
-        if (!_.isUndefined(contract.address)) {
-          cs.capTables = contract.address;
-          finish(cs, CT);
+): Promise<S3Contracts> {
+  const simpleContract = (def: Artifact) =>
+    new Promise((resolve, reject) => {
+      web3.eth.contract(def.abi).new(
+        {
+          data: def.bytecode,
+          from: controller,
+          gas: 1e6
+        },
+        (err: Error, contract: Web3.ContractInstance) => {
+          if (err !== null) {
+            reject(err);
+          } else if (!_.isUndefined(contract.address)) {
+            const address: string = contract.address;
+            resolve(address);
+          }
         }
-      }
-    );
+      );
+    }) as Promise<string>;
+  const capTables = await simpleContract(ABI.CapTables);
+  const regS = await simpleContract(ABI.TheRegS);
+  const regD = (await new Promise((resolve, reject) =>
     web3.eth.contract(ABI.TheRegD506c.abi).new(
       0, // FIXME: deal with the holding period
       { data: ABI.TheRegD506c.bytecode, from: controller, gas: 1e6 },
       (err: Error, contract: Web3.ContractInstance) => {
-        if (!_.isUndefined(contract.address)) {
-          cs.regD = contract.address;
-          finish(cs, CT);
+        if (err !== null) {
+          reject(err);
+        } else if (!_.isUndefined(contract.address)) {
+          resolve(contract.address);
         }
       }
-    );
-    web3.eth
-      .contract(ABI.TheRegS.abi)
-      .new(
-        { data: ABI.TheRegS.bytecode, from: controller, gas: 5e5 },
-        (err: Error, contract: Web3.ContractInstance) => {
-          if (!_.isUndefined(contract.address)) {
-            cs.regS = contract.address;
-            finish(cs, CT);
-          }
-        }
-      );
-  });
+    )
+  )) as string;
+  // FIXME: allow for user checker configuration
+  const kyc = await initUserChecker([], controller, web3);
+  const accreditation = await initUserChecker([], controller, web3);
+  const residency = await initUserChecker([], controller, web3);
+  const contracts = {
+    capTables,
+    regD,
+    regS,
+    kyc,
+    accreditation,
+    residency
+  };
+  return contracts;
 }
 
 export async function initUserChecker(
