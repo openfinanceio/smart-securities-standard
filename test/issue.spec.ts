@@ -25,8 +25,14 @@ describe("initialize S3", () => {
       contracts.capTables !== null && web3.isAddress(contracts.capTables),
       "capTables should be a valid address"
     );
-    assert(contracts.regD !== null && web3.isAddress(contracts.regD), "regD should be an address");
-    assert(contracts.regS !== null && web3.isAddress(contracts.regS), "regS should be an address");
+    assert(
+      contracts.regD !== null && web3.isAddress(contracts.regD),
+      "regD should be an address"
+    );
+    assert(
+      contracts.regS !== null && web3.isAddress(contracts.regS),
+      "regS should be an address"
+    );
   });
   it("should set up a user checker", async () => {
     const s3 = new Client(controller, null, provider);
@@ -84,14 +90,25 @@ describe("initialize S3", () => {
     // Check balances
     const bal1 = T.balanceOf.call(investor1);
     const bal2 = T.balanceOf.call(investor2);
+    const supply = T.totalSupply.call();
     assert.equal(bal1.toNumber(), security.investors[0].amount.toNumber());
     assert.equal(bal2.toNumber(), security.investors[1].amount.toNumber());
+    assert.equal(
+      supply.toNumber(),
+      security.investors[0].amount.plus(security.investors[1].amount).toNumber()
+    );
     // Check the cap table
     const capTableAddress = s3Contracts.capTables as string;
     const CT = web3.eth.contract(ABI.CapTables.abi).at(capTableAddress);
     const capTableBal1 = CT.balanceOf.call(result.securityId, investor1);
     const capTableBal2 = CT.balanceOf.call(result.securityId, investor2);
-    assert.equal(capTableBal1.toNumber(), security.investors[0].amount.toNumber());
-    assert.equal(capTableBal2.toNumber(), security.investors[1].amount.toNumber());
+    assert.equal(
+      capTableBal1.toNumber(),
+      security.investors[0].amount.toNumber()
+    );
+    assert.equal(
+      capTableBal2.toNumber(),
+      security.investors[1].amount.toNumber()
+    );
   }).timeout(15000);
 });
