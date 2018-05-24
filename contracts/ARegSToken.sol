@@ -55,17 +55,16 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic {
   }
 
   /// Manage shareholder count after transfer
-  function transfer(address _to, uint256 _value, address sender) public returns (bool) {
-
+  function transfer(address _to, uint256 _value, address sender) 
+    public 
+    returns 
+    (bool) 
+  {
     uint16 newCount = query(msg.sender, _to, _value);
-
-    super.transfer(_to, _value, sender);
-
-    if (shareholderCount != newCount)
-      shareholderCount = newCount;
-
-    return true;
-
+    bool transferResult = super.transfer(_to, _value, sender);
+    if (transferResult && shareholderCount != newCount)
+        shareholderCount = newCount;
+    return transferResult;
   }
 
   ///
@@ -74,16 +73,11 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic {
     public
     returns (bool)
   {
-
     uint16 newCount = query(_from, _to, _value);
-
-    super.transferFrom(_from, _to, _value, sender);
-
-    if (shareholderCount != newCount)
-      shareholderCount = newCount;
-
-    return true;
-
+    bool transferResult = super.transferFrom(_from, _to, _value, sender);
+    if (transferResult && shareholderCount != newCount)
+        shareholderCount = newCount;
+    return transferResult;
   }
 
 }

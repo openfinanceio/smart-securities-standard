@@ -75,16 +75,11 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
     public 
     returns (bool) 
   {
-    
     (uint16 newCount,) = query(msg.sender, _to, _value);
-
-    super.transfer(_to, _value, sender);
-    
-    if (shareholderCount != newCount)
+    bool transferResult = super.transfer(_to, _value, sender);
+    if (transferResult && shareholderCount != newCount)
       shareholderCount = newCount;
-    
-    return true;
-
+    return transferResult;
   }
 
   ///
@@ -93,16 +88,11 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
     public
     returns (bool)
   {
-
     (uint16 newCount,) = query(_from, _to, _value);
-
-    super.transferFrom(_from, _to, _value, sender);
-
-    if (shareholderCount != newCount)
+    bool transferResult = super.transferFrom(_from, _to, _value, sender);
+    if (transferResult && shareholderCount != newCount)
       shareholderCount = newCount;
-
-    return true;
-
+    return transferResult;
   }
 
 }
