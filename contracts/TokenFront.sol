@@ -28,9 +28,10 @@ contract TokenFront is ERC20, Ownable {
   }
   function transferFrom(address from, address to, uint256 value) public returns (bool)
   {
-    tokenLogic.transferFrom(from, to, value, msg.sender);
-    emit Transfer(from, to, value);
-    return true;
+    bool success = tokenLogic.transferFrom(from, to, value, msg.sender);
+    if (success)
+      emit Transfer(from, to, value);
+    return success;
   }
   function approve(address spender, uint256 value) public returns (bool)
   {
@@ -48,8 +49,9 @@ contract TokenFront is ERC20, Ownable {
   }
   function transfer(address to, uint256 value) public returns (bool)
   {
-    tokenLogic.transfer(to, value, msg.sender);
-    emit Transfer(msg.sender, to, value);
-    return true;
+    bool success =  tokenLogic.transfer(to, value, msg.sender);
+    if (success)
+      emit Transfer(msg.sender, to, value);
+    return success;
   }
 }
