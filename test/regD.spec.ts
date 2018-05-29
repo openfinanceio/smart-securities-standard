@@ -1,11 +1,12 @@
 import * as fixtures from "./fixtures";
 import { ABI } from "../src/Contracts";
 import { Client } from "../src/S3";
-import { Security } from "../src/Types";
+import { Security, Errors } from "../src/Types";
 
 import * as assert from "assert";
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
+import * as sha3 from "web3/lib/utils/sha3";
 
 const provider = new Web3.providers.HttpProvider("http://localhost:8545");
 const web3 = new Web3(provider);
@@ -29,9 +30,13 @@ const setup = async () => {
   };
 };
 
+const transferErrorSig = sha3(
+  "TransferError(address,address,address,uint256,uint16)"
+);
+
 describe("Regulation D", () => {
   describe("user status", function() {
-    this.timeout(3000);
+    this.timeout(5000);
     let ecosystem;
     let front: string;
     let security: Security;
@@ -77,18 +82,37 @@ describe("Regulation D", () => {
         from: env.roles.checkers.accreditation
       });
     });
-    it("should prevent unaccredited investors from buying", () => {
-      // investor2 is not accredited
-      try {
-        const T = web3.eth.contract(ABI.TokenFront.abi).at(front);
-        T.transfer(env.roles.investor2, 1e2, { from: env.roles.investor1 });
-      } catch {
-        return;
-      }
-      assert(false, "the transfer should have failed");
-    });
-    it("should prevent unverified (KYC) investors from buying");
+    it("should prevent unverified (KYC) investors from buying", done => {
+      // investor2 does not have KYC connfirmation
+      const T = web3.eth.contract(ABI.TokenFront.abi).at(front);
+      T.transfer(
+        env.roles.investor2,
+        1e2,
+        { from: env.roles.investor1 },
+        (err: Error, txHash: string) => {
+          assert(err === null, "transfer tx should not revert");
+          web3.eth.getTransactionReceipt(txHash, (err: Error, receipt: any) => {
+            // FIXME: Make this less ad hoc
+            assert(receipt.logs.length === 1, "should generate 1 log message");
+            assert(
+              receipt.logs[0].topics[0].slice(2) === transferErrorSig,
+              "should generate the correct type of log message"
+            );
+            const errorCode = new BigNumber(
+              receipt.logs[0].data.slice(2 + 64),
+              16
+            );
+            assert(
+              errorCode.toNumber() === Errors.RegD.BuyerAMLKYC,
+              "wrong reason " + errorCode.toString()
+            );
+            done();
+          });
+        }
+      );
+    }).timeout(6000);
     it("should prevent unverified (KYC) investors from selling");
+    it("should prevent unaccredited investors from buying");
   });
   describe("limits", () => {
     it("should prevent more than 99 shareholders");

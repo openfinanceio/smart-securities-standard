@@ -4,6 +4,10 @@ import * as Web3 from "web3";
 import { RegD } from "../src/Types";
 
 export const environment = (web3: Web3) => {
+  if (!web3.isConnected()) {
+    console.log("\x1b[33m\x1b[41m%s\x1b[0m", "Node not connected");
+    process.exit(1);
+  }
   const issuer = web3.eth.accounts[5];
   const securityOwner = web3.eth.accounts[6];
   return {

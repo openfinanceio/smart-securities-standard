@@ -51,3 +51,14 @@ export interface S3Metadata {
   id: SecurityId;
   name: string;
 }
+
+export namespace Errors {
+  export enum RegD {
+    Ok = 0,
+    HoldingPeriod,
+    ShareholderMaximum,
+    BuyerAMLKYC,
+    SellerAMLKYC,
+    Accreditation
+  }
+}

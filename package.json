@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "@0xproject/typescript-typings": "0.0.3",
+    "@cfxmarkets/vendor-types": "1.0.0",
     "@types/lodash": "^4.14.107",
     "@types/mocha": "^2.2.48",
     "mocha": "^5.0.1"

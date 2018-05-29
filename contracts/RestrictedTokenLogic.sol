@@ -34,7 +34,7 @@ contract RestrictedTokenLogic is DelegatedTokenLogic {
     if (res == 0) {
       return super.transfer(to, value, sender);
     } else {
-      emit TransferError(this, sender, to, value, res);
+      emit TransferError(front, sender, to, value, res);
       return false;
     }
 
@@ -51,7 +51,7 @@ contract RestrictedTokenLogic is DelegatedTokenLogic {
     if (res == 0) {
       return super.transferFrom(from, to, value, sender);
     } else {
-      emit TransferError(this, from, to, value, res);
+      emit TransferError(front, from, to, value, res);
       return false;
     }
 
