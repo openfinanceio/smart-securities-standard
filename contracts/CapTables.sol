@@ -54,7 +54,6 @@ contract CapTables is IndexConsumer {
   /** @dev Transfer an amount of security. */
   function transfer(uint256 security, address src, address dest, uint256 amount) public {
     require(msg.sender == addresses[security]);
-    require(capTable[security][src] >= amount);
     capTable[security][src] = capTable[security][src].sub(amount);
     capTable[security][dest] = capTable[security][dest].add(amount);
   }

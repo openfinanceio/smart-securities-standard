@@ -24,7 +24,7 @@ contract TokenFront is ERC20, Ownable {
   }
   function allowance(address owner, address spender) public view returns (uint256)
   {
-    return tokenLogic.allowance(owner, spender, msg.sender);
+    return tokenLogic.allowance(owner, spender);
   }
   function transferFrom(address from, address to, uint256 value) public returns (bool)
   {

@@ -54,7 +54,6 @@ contract DelegatedTokenLogic is Ownable, DelegatedERC20 {
     returns (bool) 
   {
     require(_to != address(0));
-    require(_value <= balanceOf(sender));
 
     ICapTables(capTables).transfer(index, sender, _to, _value);
     return true;
@@ -80,7 +79,6 @@ contract DelegatedTokenLogic is Ownable, DelegatedERC20 {
     returns (bool) 
   {
     require(_to != address(0));
-    require(_value <= balanceOf(_from));
     require(_value <= allowed[_from][sender]);
 
     ICapTables(capTables).transfer(index, _from, _to, _value);
@@ -113,7 +111,7 @@ contract DelegatedTokenLogic is Ownable, DelegatedERC20 {
    * @param _spender address The address which will spend the funds.
    * @return A uint256 specifying the amount of tokens still available for the spender.
    */
-  function allowance(address _owner, address _spender, address sender) public view returns (uint256) {
+  function allowance(address _owner, address _spender) public view returns (uint256) {
     return allowed[_owner][_spender];
   }
 

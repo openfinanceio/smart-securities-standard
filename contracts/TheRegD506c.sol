@@ -91,7 +91,7 @@ contract TheRegD506c is RegD506c, TransferRestrictor, Ownable() {
     // The seller must pass AMLKYC 
     if (!amlkyc(_from, _token))
       return uint16(ErrorCode.SellerAMLKYC);
-    
+
     // The buyer must pass AMLKYC
     if (!amlkyc(_to, _token))
       return uint16(ErrorCode.BuyerAMLKYC);

@@ -22,6 +22,7 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
   /// supply under the control of the contract creator
   constructor(
     uint256 supply,
+    uint16 initialShareholderCount,
     bool isFund_, 
     address restrictor_,
     address capTables_
@@ -29,6 +30,7 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
     public
   {
     totalSupply_ = supply; 
+    shareholderCount = initialShareholderCount;
     isFund = isFund_;
 
     restrictor = restrictor_;
