@@ -49,6 +49,7 @@ export async function issue(
             console.log("Creating RegD coordinator");
             web3.eth.contract(ABI.ARegD506cToken.abi).new(
               supply,
+              security.investors.length,
               security.isFund,
               contracts.regD,
               contracts.capTables,
@@ -69,17 +70,13 @@ export async function issue(
                     .contract(ABI.TheRegD506c.abi)
                     .at(regDAddr);
                   console.log("Registering AML/KYC checker");
-                  regD.registerAmlKycChecker(
-                    security.checkers.amlKyc,
-                    instance.address,
-                    {
-                      from: controller,
-                      gas: 1e5
-                    }
-                  );
+                  regD.registerAmlKycChecker(contracts.kyc, instance.address, {
+                    from: controller,
+                    gas: 1e5
+                  });
                   console.log("Registering accreditation checker");
                   regD.registerAccreditationChecker(
-                    security.checkers.accreditation,
+                    contracts.accreditation,
                     instance.address,
                     {
                       from: controller,

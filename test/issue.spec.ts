@@ -115,5 +115,16 @@ describe("initialize S3", () => {
       result.coordinator,
       "front should have the right coordinator"
     );
+    const regDToken = web3.eth
+      .contract(ABI.ARegD506cToken.abi)
+      .at(result.coordinator);
+    const currentFront = regDToken.front.call();
+    assert.equal(currentFront, result.front, "front should be set correctly");
+    const shareholderCount = regDToken.shareholderCount.call();
+    assert.equal(
+      shareholderCount,
+      security.investors.length,
+      "number of shareholders"
+    );
   }).timeout(15000);
 });
