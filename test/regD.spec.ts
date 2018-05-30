@@ -78,6 +78,38 @@ const configure = async () => {
   return { front, confirmKYC, confirmAccreditation };
 };
 
+const transfer = (
+  src: string,
+  dest: string,
+  front: string,
+  target: Errors.RegD,
+  done: () => void
+) => {
+  const T = web3.eth.contract(ABI.TokenFront.abi).at(front);
+  T.transfer(
+    dest,
+    1e2,
+    { from: src, gas: 5e5 },
+    (err: Error, txHash: string) => {
+      assert(err === null, "transfer tx should not revert");
+      web3.eth.getTransactionReceipt(txHash, (err: Error, receipt: any) => {
+        // FIXME: Make this less ad hoc
+        assert(receipt.logs.length === 1, "should generate 1 log message");
+        assert(
+          receipt.logs[0].topics[0].slice(2) === transferErrorSig,
+          "should generate the correct type of log message"
+        );
+        const errorCode = new BigNumber(receipt.logs[0].data.slice(2 + 64), 16);
+        assert(
+          errorCode.toNumber() === target,
+          "wrong reason " + errorCode.toString()
+        );
+        done();
+      });
+    }
+  );
+};
+
 describe("Regulation D", () => {
   describe("user status", function() {
     this.timeout(5000);
@@ -86,89 +118,32 @@ describe("Regulation D", () => {
       deployment = await configure();
     });
     it("should prevent unverified (KYC) investors from selling", done => {
-      const T = web3.eth.contract(ABI.TokenFront.abi).at(deployment.front);
-      T.transfer(
+      transfer(
+        env.roles.investor1,
         env.roles.investor2,
-        1e2,
-        { from: env.roles.investor1, gas: 5e5 },
-        (err: Error, txHash: string) => {
-          assert(err === null, "transfer tx should not revert");
-          web3.eth.getTransactionReceipt(txHash, (err: Error, receipt: any) => {
-            // FIXME: Make this less ad hoc
-            assert(receipt.logs.length === 1, "should generate 1 log message");
-            assert(
-              receipt.logs[0].topics[0].slice(2) === transferErrorSig,
-              "should generate the correct type of log message"
-            );
-            const errorCode = new BigNumber(
-              receipt.logs[0].data.slice(2 + 64),
-              16
-            );
-            assert(
-              errorCode.toNumber() === Errors.RegD.SellerAMLKYC,
-              "wrong reason " + errorCode.toString()
-            );
-            done();
-          });
-        }
+        deployment.front,
+        Errors.RegD.SellerAMLKYC,
+        done
       );
     }).timeout(6000);
     it("should prevent unverified (KYC) investors from buying", done => {
       deployment.confirmKYC(env.roles.investor1);
-      const T = web3.eth.contract(ABI.TokenFront.abi).at(deployment.front);
-      T.transfer(
+      transfer(
+        env.roles.investor1,
         env.roles.investor2,
-        1e2,
-        { from: env.roles.investor1, gas: 5e5 },
-        (err: Error, txHash: string) => {
-          assert(err === null, "transfer tx should not revert");
-          web3.eth.getTransactionReceipt(txHash, (err: Error, receipt: any) => {
-            // FIXME: Make this less ad hoc
-            assert(receipt.logs.length === 1, "should generate 1 log message");
-            assert(
-              receipt.logs[0].topics[0].slice(2) === transferErrorSig,
-              "should generate the correct type of log message"
-            );
-            const errorCode = new BigNumber(
-              receipt.logs[0].data.slice(2 + 64),
-              16
-            );
-            assert(
-              errorCode.toNumber() === Errors.RegD.BuyerAMLKYC,
-              "wrong reason " + errorCode.toString()
-            );
-            done();
-          });
-        }
+        deployment.front,
+        Errors.RegD.BuyerAMLKYC,
+        done
       );
     }).timeout(6000);
     it("should prevent unaccredited buying", done => {
       deployment.confirmKYC(env.roles.investor2);
-      const T = web3.eth.contract(ABI.TokenFront.abi).at(deployment.front);
-      T.transfer(
+      transfer(
+        env.roles.investor1,
         env.roles.investor2,
-        1e2,
-        { from: env.roles.investor1, gas: 5e5 },
-        (err: Error, txHash: string) => {
-          assert(err === null, "transfer tx should not revert");
-          web3.eth.getTransactionReceipt(txHash, (err: Error, receipt: any) => {
-            // FIXME: Make this less ad hoc
-            assert(receipt.logs.length === 1, "should generate 1 log message");
-            assert(
-              receipt.logs[0].topics[0].slice(2) === transferErrorSig,
-              "should generate the correct type of log message"
-            );
-            const errorCode = new BigNumber(
-              receipt.logs[0].data.slice(2 + 64),
-              16
-            );
-            assert(
-              errorCode.toNumber() === Errors.RegD.Accreditation,
-              "wrong reason " + errorCode.toString()
-            );
-            done();
-          });
-        }
+        deployment.front,
+        Errors.RegD.Accreditation,
+        done
       );
     }).timeout(6000);
   });
