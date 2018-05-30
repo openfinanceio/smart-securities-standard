@@ -45,8 +45,8 @@ describe("Regulation D", () => {
       ecosystem = await setup();
       // Issue a security
       security = env.security(
-        ecosystem.amlKycAddr,
-        ecosystem.accreditationAddr,
+        env.roles.checkers.amlKyc,
+        env.roles.checkers.accreditation,
         [
           {
             address: env.roles.investor1,
@@ -81,6 +81,18 @@ describe("Regulation D", () => {
       await Acc.confirmUser(env.roles.investor1, 0x02, {
         from: env.roles.checkers.accreditation
       });
+      // Invariants
+      const kyc1 = KYC.confirm.call(env.roles.investor1);
+      const kyc2 = KYC.confirm.call(env.roles.investor2);
+      const acc1 = KYC.confirm.call(env.roles.investor1);
+      const acc2 = KYC.confirm.call(env.roles.investor2);
+      assert(kyc1, "investor 1 should be KYC'd");
+      assert(acc1, "investor 1 should be accredited");
+      assert(!kyc2, "investor 2 should not be KYC'd");
+      assert(!acc2, "investor 2 should not be accredited");
+      const T = web3.eth.contract(ABI.TokenFront.abi).at(front);
+      const bal = T.balanceOf.call(env.roles.investor1);
+      assert(bal.equals(security.investors[0].amount), "security amount");
     });
     it("should prevent unverified (KYC) investors from buying", done => {
       // investor2 does not have KYC connfirmation

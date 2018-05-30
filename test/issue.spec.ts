@@ -102,5 +102,18 @@ describe("initialize S3", () => {
       capTableBal2.toNumber(),
       security.investors[1].amount.toNumber()
     );
+    // Ownership
+    const capTableOwner = CT.addresses.call(result.securityId);
+    assert.equal(
+      capTableOwner,
+      result.coordinator,
+      "coordinator should own the cap table"
+    );
+    const frontCoordinator = T.tokenLogic.call();
+    assert.equal(
+      frontCoordinator,
+      result.coordinator,
+      "front should have the right coordinator"
+    );
   }).timeout(15000);
 });
