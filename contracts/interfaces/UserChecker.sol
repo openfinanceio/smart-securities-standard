@@ -2,5 +2,5 @@ pragma solidity ^0.4.10;
 
 
 interface UserChecker {
-  function confirm(address _user) external returns (bool);
+  function confirmed(address _user) external view returns (bool);
 }

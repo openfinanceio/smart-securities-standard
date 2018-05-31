@@ -80,7 +80,6 @@ contract TheRegD506c is RegD506c, TransferRestrictor, Ownable() {
     // The security cannot be transfered until after its holding period 
     if (issuanceDate[_token] != 0 && now < issuanceDate[_token] + holdingPeriod)
       return uint16(ErrorCode.HoldingPeriod);
-
     // Shareholder limits
     // 99 if the security is raising money for a fund and 2000 otherwise
     (uint16 newShareholderCount, bool isFund) = RegD506cToken(_token).query(_from, _to, _value);
@@ -109,18 +108,20 @@ contract TheRegD506c is RegD506c, TransferRestrictor, Ownable() {
   /// Confirm AML-KYC status with the registered checker
   function amlkyc(address _user, address _token) 
     internal
+    view
     returns (bool) 
   {
-    return UserChecker(amlkycChecker[_token]).confirm(_user);
+    return UserChecker(amlkycChecker[_token]).confirmed(_user);
   }
 
   ///
   /// Confirm accredited investor status with the associated checker
   function accreditation(address _user, address _token)
     internal
+    view
     returns (bool)
   {
-    return UserChecker(accreditationChecker[_token]).confirm(_user);
+    return UserChecker(accreditationChecker[_token]).confirmed(_user);
   }
 
 }

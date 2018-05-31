@@ -12,15 +12,6 @@ contract SimpleUserChecker is UserChecker, Ownable {
   mapping(address => bool) public confirmations;
 
   ///
-  /// Confirm a user
-  function confirm(address _user) 
-    external
-    returns (bool)
-  {
-    return confirmations[_user];
-  }
-
-  ///
   /// Add a checker
   function addChecker(address _checker)
     public
@@ -48,4 +39,13 @@ contract SimpleUserChecker is UserChecker, Ownable {
     confirmations[_user] = true;
   }
 
+  ///
+  /// Check if an address has been confirmed
+  function confirmed(address _user) 
+    public
+    view
+    returns (bool)
+  {
+    return confirmations[_user];
+  }
 }

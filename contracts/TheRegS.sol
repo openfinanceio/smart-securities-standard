@@ -77,18 +77,20 @@ contract TheRegS is RegS, TransferRestrictor {
   /// Confirm AML-KYC status with the registered checker
   function amlkyc(address _user, address _token)
     internal
+    view
     returns (bool)
   {
-    return UserChecker(amlkycChecker[_token]).confirm(_user);
+    return UserChecker(amlkycChecker[_token]).confirmed(_user);
   }
 
   ///
   /// Confirm international status
   function residency(address _user, address _token)
     internal
+    view
     returns (bool)
   {
-    return UserChecker(residencyChecker[_token]).confirm(_user);
+    return UserChecker(residencyChecker[_token]).confirmed(_user);
   }
 
 }

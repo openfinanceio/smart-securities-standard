@@ -33,6 +33,7 @@ const setup = async () => {
 const transferErrorSig = sha3(
   "TransferError(address,address,address,uint256,uint16)"
 );
+const transferSig = sha3("Transfer(address,address,uint256)");
 
 const configure = async () => {
   console.log("Setting up S3");
@@ -71,14 +72,16 @@ const configure = async () => {
   const Acc = web3.eth
     .contract(ABI.SimpleUserChecker.abi)
     .at(contracts.accreditation);
-  const confirmAccreditation = (addr: string) =>
+  const confirmAccreditation = (addr: string) => {
     Acc.confirmUser(addr, 0x02, {
       from: env.roles.checkers.accreditation
     });
+    assert(Acc.confirmed.call(addr), "user should be confirmed");
+  };
   return { front, confirmKYC, confirmAccreditation };
 };
 
-const transfer = (
+const transferError = (
   src: string,
   dest: string,
   front: string,
@@ -118,7 +121,7 @@ describe("Regulation D", () => {
       deployment = await configure();
     });
     it("should prevent unverified (KYC) investors from selling", done => {
-      transfer(
+      transferError(
         env.roles.investor1,
         env.roles.investor2,
         deployment.front,
@@ -128,7 +131,7 @@ describe("Regulation D", () => {
     }).timeout(6000);
     it("should prevent unverified (KYC) investors from buying", done => {
       deployment.confirmKYC(env.roles.investor1);
-      transfer(
+      transferError(
         env.roles.investor1,
         env.roles.investor2,
         deployment.front,
@@ -138,12 +141,34 @@ describe("Regulation D", () => {
     }).timeout(6000);
     it("should prevent unaccredited buying", done => {
       deployment.confirmKYC(env.roles.investor2);
-      transfer(
+      transferError(
         env.roles.investor1,
         env.roles.investor2,
         deployment.front,
         Errors.RegD.Accreditation,
         done
+      );
+    }).timeout(6000);
+    it("should allow a transfer", done => {
+      deployment.confirmAccreditation(env.roles.investor2);
+      const T = web3.eth.contract(ABI.TokenFront.abi).at(deployment.front);
+      T.transfer(
+        env.roles.investor2,
+        1e2,
+        { from: env.roles.investor1 },
+        (err: Error, txHash: string) => {
+          console.log(err);
+          assert(err === null, "tx should go through");
+          web3.eth.getTransactionReceipt(txHash, (err: Error, receipt: any) => {
+            assert(err === null, "should get tx receipt");
+            assert(receipt.logs.length === 1, "should be one log message");
+            assert(
+              receipt.logs[0].topics[0].slice(2) === transferSig,
+              "should be a Transfer event"
+            );
+            done();
+          });
+        }
       );
     }).timeout(6000);
   });
