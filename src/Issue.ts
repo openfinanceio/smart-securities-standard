@@ -159,7 +159,6 @@ export async function issue(
       }) as Promise<[Address, Web3.ContractInstance]>;
     return createFront.then(createCoordinator);
   }
-  console.log("Deploying front and coordinator");
   const [frontAddress, T] = await deploy();
   const tokenAddress = T.address;
   const sid: BigNumber = T.index.call();

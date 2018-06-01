@@ -6,7 +6,7 @@ ls contracts/*.sol | xargs solc --optimize --abi --bin -o build --overwrite
 # Combine artifacts 
 for abiFile in build/*.abi; do 
   fileRoot=$(echo -n $abiFile | head -c -4)
-  echo "{ \"abi\": $(cat $abiFile), \"bytecode\": \"$(cat $fileRoot.bin)\" }" > $fileRoot.json
+  echo "{ \"abi\": $(cat $abiFile), \"bytecode\": \"0x$(cat $fileRoot.bin)\" }" > $fileRoot.json
 done
 
 # Clean up
