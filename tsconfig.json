@@ -18,6 +18,7 @@
     "types": [
       "@0xproject/typescript-typings/types/web3",
       "@cfxmarkets/vendor-types",
+      "@cfxmarkets/web3-utils",
       "node"
     ]
   },

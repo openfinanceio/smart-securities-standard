@@ -1,3 +1,4 @@
+import { Provider } from "ethereum-types";
 import * as Web3 from "web3";
 import { ABI } from "./Contracts";
 import * as Init from "./Init";
@@ -24,7 +25,7 @@ export class Client {
   private st: State;
   private w3: Web3;
 
-  constructor(c: Address, s: State | null, p: Web3.Provider) {
+  constructor(c: Address, s: State | null, p: Provider) {
     this.controller = c;
     this.w3 = new Web3(p);
     if (s !== null) {

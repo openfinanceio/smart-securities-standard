@@ -30,7 +30,7 @@ describe("initialize S3", () => {
       contracts.regS !== null && web3.isAddress(contracts.regS),
       "regS should be an address"
     );
-  });
+  }).timeout(15e3);
   it("should set up a user checker", async () => {
     const s3 = new Client(controller, null, provider);
     await s3.initS3();
@@ -39,7 +39,7 @@ describe("initialize S3", () => {
       web3.isAddress(userChecker),
       "userChecker should be a valid address"
     );
-  });
+  }).timeout(15e3);
   // Currently the point of this test is to exercise the issuance procedure
   it("should issue a security", async () => {
     const s3 = new Client(controller, null, provider);
@@ -152,7 +152,7 @@ describe("initialize S3", () => {
           "number of shareholders"
         );
         resolve();
-      }, 5000);
+      }, 3e3);
     });
   }).timeout(35e3);
 });

@@ -10,6 +10,7 @@ import * as sha3 from "web3/lib/utils/sha3";
 
 const provider = new Web3.providers.HttpProvider("http://localhost:8545");
 const web3 = new Web3(provider);
+const txSuccess = "0x1";
 
 const env = fixtures.environment(web3);
 const controller = env.roles.controller;
@@ -76,7 +77,6 @@ const configure = async () => {
     Acc.confirmUser(addr, 0x02, {
       from: env.roles.checkers.accreditation
     });
-    assert(Acc.confirmed.call(addr), "user should be confirmed");
   };
   return { front, confirmKYC, confirmAccreditation };
 };
@@ -95,27 +95,32 @@ const transferError = (
     { from: src, gas: 5e5 },
     (err: Error, txHash: string) => {
       assert(err === null, "transfer tx should not revert");
-      web3.eth.getTransactionReceipt(txHash, (err: Error, receipt: any) => {
-        // FIXME: Make this less ad hoc
-        assert(receipt.logs.length === 1, "should generate 1 log message");
-        assert(
-          receipt.logs[0].topics[0].slice(2) === transferErrorSig,
-          "should generate the correct type of log message"
-        );
-        const errorCode = new BigNumber(receipt.logs[0].data.slice(2 + 64), 16);
-        assert(
-          errorCode.toNumber() === target,
-          "wrong reason " + errorCode.toString()
-        );
-        done();
-      });
+      setTimeout(() => {
+        web3.eth.getTransactionReceipt(txHash, (err: Error, receipt: any) => {
+          // FIXME: Make this less ad hoc
+          assert(receipt.logs.length === 1, "should generate 1 log message");
+          assert(
+            receipt.logs[0].topics[0].slice(2) === transferErrorSig,
+            "should generate the correct type of log message"
+          );
+          const errorCode = new BigNumber(
+            receipt.logs[0].data.slice(2 + 64),
+            16
+          );
+          assert(
+            errorCode.toNumber() === target,
+            "wrong reason " + errorCode.toString()
+          );
+          done();
+        });
+      }, 2e3);
     }
   );
 };
 
 describe("Regulation D", () => {
   describe("user status", function() {
-    this.timeout(5000);
+    this.timeout(35e3);
     let deployment: any;
     before(async () => {
       deployment = await configure();
@@ -128,17 +133,19 @@ describe("Regulation D", () => {
         Errors.RegD.SellerAMLKYC,
         done
       );
-    }).timeout(6000);
+    }).timeout(15e3);
     it("should prevent unverified (KYC) investors from buying", done => {
       deployment.confirmKYC(env.roles.investor1);
-      transferError(
-        env.roles.investor1,
-        env.roles.investor2,
-        deployment.front,
-        Errors.RegD.BuyerAMLKYC,
-        done
-      );
-    }).timeout(6000);
+      setTimeout(() => {
+        transferError(
+          env.roles.investor1,
+          env.roles.investor2,
+          deployment.front,
+          Errors.RegD.BuyerAMLKYC,
+          done
+        );
+      }, 1e3);
+    }).timeout(15e3);
     it("should prevent unaccredited buying", done => {
       deployment.confirmKYC(env.roles.investor2);
       transferError(
@@ -148,29 +155,40 @@ describe("Regulation D", () => {
         Errors.RegD.Accreditation,
         done
       );
-    }).timeout(6000);
+    }).timeout(15e3);
     it("should allow a transfer", done => {
       deployment.confirmAccreditation(env.roles.investor2);
-      const T = web3.eth.contract(ABI.TokenFront.abi).at(deployment.front);
-      T.transfer(
-        env.roles.investor2,
-        1e2,
-        { from: env.roles.investor1 },
-        (err: Error, txHash: string) => {
-          console.log(err);
-          assert(err === null, "tx should go through");
-          web3.eth.getTransactionReceipt(txHash, (err: Error, receipt: any) => {
-            assert(err === null, "should get tx receipt");
-            assert(receipt.logs.length === 1, "should be one log message");
-            assert(
-              receipt.logs[0].topics[0].slice(2) === transferSig,
-              "should be a Transfer event"
-            );
-            done();
-          });
-        }
-      );
-    }).timeout(6000);
+      setTimeout(() => {
+        const T = web3.eth.contract(ABI.TokenFront.abi).at(deployment.front);
+        T.transfer(
+          env.roles.investor2,
+          1e2,
+          { from: env.roles.investor1 },
+          (err: Error, txHash: string) => {
+            assert(err === null, "tx should go through");
+            setTimeout(() => {
+              web3.eth.getTransactionReceipt(
+                txHash,
+                (err: Error, receipt: any) => {
+                  assert(err === null, "should get tx receipt");
+                  assert(receipt.status === txSuccess, "call should succeed");
+                  console.log(receipt);
+                  assert(
+                    receipt.logs.length === 1,
+                    "should be one log message"
+                  );
+                  assert(
+                    receipt.logs[0].topics[0].slice(2) === transferSig,
+                    "should be a Transfer event"
+                  );
+                  done();
+                }
+              );
+            }, 2e3);
+          }
+        );
+      }, 2e3);
+    }).timeout(15e3);
   });
   describe("limits", function() {
     this.timeout(5000);
