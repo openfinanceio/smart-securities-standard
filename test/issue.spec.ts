@@ -78,58 +78,81 @@ describe("initialize S3", () => {
       }
     ]);
     const result = await s3.issue(security);
-    const T = web3.eth.contract(ABI.TokenFront.abi).at(result.front);
-    // Check balances
-    const bal1 = T.balanceOf.call(roles.investor1);
-    const bal2 = T.balanceOf.call(roles.investor2);
-    const supply = T.totalSupply.call();
-    /*
-    assert.equal(bal1.toNumber(), security.investors[0].amount.toNumber(), "investor1 balance");
-    assert.equal(bal2.toNumber(), security.investors[1].amount.toNumber(), "investor2 balance");
-    assert.equal(
-      supply.toNumber(),
-      security.investors[0].amount.plus(security.investors[1].amount).toNumber(),
-      "total supply"
-    );
-    */
-    // Check the cap table
-    const capTableAddress = s3Contracts.capTables as string;
-    const CT = web3.eth.contract(ABI.CapTables.abi).at(capTableAddress);
-    const capTableBal1 = CT.balanceOf.call(result.securityId, roles.investor1);
-    const capTableBal2 = CT.balanceOf.call(result.securityId, roles.investor2);
-    assert.equal(
-      capTableBal1.toNumber(),
-      security.investors[0].amount.toNumber(),
-      "investor1 balance (cap table)"
-    );
-    assert.equal(
-      capTableBal2.toNumber(),
-      security.investors[1].amount.toNumber(),
-      "investor2 balance (cap table)"
-    );
-    // Ownership
-    const capTableOwner = CT.addresses.call(result.securityId);
-    assert.equal(
-      capTableOwner,
-      result.coordinator,
-      "coordinator should own the cap table"
-    );
-    const frontCoordinator = T.tokenLogic.call();
-    assert.equal(
-      frontCoordinator,
-      result.coordinator,
-      "front should have the right coordinator"
-    );
-    const regDToken = web3.eth
-      .contract(ABI.ARegD506cToken.abi)
-      .at(result.coordinator);
-    const currentFront = regDToken.front.call();
-    assert.equal(currentFront, result.front, "front should be set correctly");
-    const shareholderCount = regDToken.shareholderCount.call();
-    assert.equal(
-      shareholderCount,
-      security.investors.length,
-      "number of shareholders"
-    );
-  }).timeout(30e3);
+    await new Promise(resolve => {
+      setTimeout(() => {
+        const T = web3.eth.contract(ABI.TokenFront.abi).at(result.front);
+        // Check balances
+        const bal1 = T.balanceOf.call(roles.investor1);
+        const bal2 = T.balanceOf.call(roles.investor2);
+        const supply = T.totalSupply.call();
+        assert.equal(
+          bal1.toNumber(),
+          security.investors[0].amount.toNumber(),
+          "investor1 balance"
+        );
+        assert.equal(
+          bal2.toNumber(),
+          security.investors[1].amount.toNumber(),
+          "investor2 balance"
+        );
+        assert.equal(
+          supply.toNumber(),
+          security.investors[0].amount
+            .plus(security.investors[1].amount)
+            .toNumber(),
+          "total supply"
+        );
+        // Check the cap table
+        const capTableAddress = s3Contracts.capTables as string;
+        const CT = web3.eth.contract(ABI.CapTables.abi).at(capTableAddress);
+        const capTableBal1 = CT.balanceOf.call(
+          result.securityId,
+          roles.investor1
+        );
+        const capTableBal2 = CT.balanceOf.call(
+          result.securityId,
+          roles.investor2
+        );
+        assert.equal(
+          capTableBal1.toNumber(),
+          security.investors[0].amount.toNumber(),
+          "investor1 balance (cap table)"
+        );
+        assert.equal(
+          capTableBal2.toNumber(),
+          security.investors[1].amount.toNumber(),
+          "investor2 balance (cap table)"
+        );
+        // Ownership
+        const capTableOwner = CT.addresses.call(result.securityId);
+        assert.equal(
+          capTableOwner,
+          result.coordinator,
+          "coordinator should own the cap table"
+        );
+        const frontCoordinator = T.tokenLogic.call();
+        assert.equal(
+          frontCoordinator,
+          result.coordinator,
+          "front should have the right coordinator"
+        );
+        const regDToken = web3.eth
+          .contract(ABI.ARegD506cToken.abi)
+          .at(result.coordinator);
+        const currentFront = regDToken.front.call();
+        assert.equal(
+          currentFront,
+          result.front,
+          "front should be set correctly"
+        );
+        const shareholderCount = regDToken.shareholderCount.call();
+        assert.equal(
+          shareholderCount,
+          security.investors.length,
+          "number of shareholders"
+        );
+        resolve();
+      }, 5000);
+    });
+  }).timeout(35e3);
 });

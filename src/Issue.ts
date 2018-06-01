@@ -190,7 +190,9 @@ export async function issue(
     })
   );
   // Move control of the cap table to the token
-  CT.migrate(sid, tokenAddress, { from: controller });
+  console.log("Migrating");
+  const th = CT.migrate(sid, tokenAddress, { from: controller });
+  console.log(th);
   if (security.__type == "RegD") {
     T.issue({ from: security.issuer });
   }
