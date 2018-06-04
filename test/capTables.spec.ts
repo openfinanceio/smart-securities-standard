@@ -22,7 +22,8 @@ describe("CapTables", () => {
         .contract(ABI.CapTables.abi)
         .at(contractAddress as string);
       const tx1 = CT.initialize(new BigNumber(1e5), env.roles.issuer, {
-        from: env.roles.controller
+        from: env.roles.controller,
+        gas: 5e5
       });
       const rec0 = await txReceipt(web3.eth, tx1);
       assert(rec0.status === "0x1", "initialize success");
@@ -30,7 +31,8 @@ describe("CapTables", () => {
       const id0 = new BigNumber(rec0.logs[0].data.slice(2), 16);
       assert(id0.equals(0), "id 1");
       const tx2 = CT.initialize(1e20, env.roles.investor1, {
-        from: env.roles.controller
+        from: env.roles.controller,
+        gas: 5e5
       });
       const rec1 = await txReceipt(web3.eth, tx2);
       const id1 = new BigNumber(rec1.logs[0].data.slice(2), 16);
@@ -44,28 +46,20 @@ describe("CapTables", () => {
     this.timeout(15e3);
     let CT: Web3.ContractInstance;
     let securityId: BigNumber;
-    before(done => {
-      web3.eth.contract(ABI.CapTables.abi).new(
-        {
-          data: ABI.CapTables.bytecode,
-          from: env.roles.controller,
-          gas: 5e5
-        },
-        async (err: Error, instance: Web3.ContractInstance) => {
-          assert(err === null, "new contract");
-          if (instance.address === undefined) {
-            return;
-          }
-          CT = instance;
-          const tx0 = CT.initialize(1e5, env.roles.issuer, {
-            from: env.roles.controller
-          });
-          const rec0 = await txReceipt(web3.eth, tx0);
-          assert(rec0.status === "0x1", "initialize should succeed");
-          securityId = new BigNumber(rec0.logs[0].data.slice(2), 16);
-          done();
-        }
-      );
+    before(async () => {
+      const { transactionHash } = web3.eth.contract(ABI.CapTables.abi).new({
+        data: ABI.CapTables.bytecode,
+        from: env.roles.controller,
+        gas: 1e6
+      });
+      const { contractAddress } = await txReceipt(web3.eth, transactionHash);
+      CT = web3.eth.contract(ABI.CapTables.abi).at(contractAddress as string);
+      const tx0 = CT.initialize(1e5, env.roles.issuer, {
+        from: env.roles.controller,
+        gas: 5e5
+      });
+      const rec0 = await txReceipt(web3.eth, tx0);
+      securityId = new BigNumber(rec0.logs[0].data.slice(2), 16);
     });
     it("should transfer funds", async () => {
       const tx1 = CT.transfer(
@@ -76,7 +70,7 @@ describe("CapTables", () => {
         { from: env.roles.issuer }
       );
       const rec1 = await txReceipt(web3.eth, tx1);
-      assert(rec1.status === "0x1", "the transaction should succed");
+      assert(rec1.status === "0x1", "the transaction should succeed");
     }).timeout(10e3);
   });
 });
