@@ -6,6 +6,7 @@ import { Errors } from "../src/Types";
 import * as assert from "assert";
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
+import { txReceipt } from "@cfxmarkets/web3-utils";
 import * as sha3 from "web3/lib/utils/sha3";
 
 const provider = new Web3.providers.HttpProvider("http://localhost:8545");
@@ -61,10 +62,12 @@ const configure = async () => {
   console.log("Setting up KYC");
   await ecosystem.s3.registerForKyc([env.roles.checkers.amlKyc]);
   const KYC = web3.eth.contract(ABI.SimpleUserChecker.abi).at(contracts.kyc);
-  const confirmKYC = (addr: string) =>
-    KYC.confirmUser(addr, 0x01, {
+  const confirmKYC = async (addr: string) => {
+    const tx = KYC.confirmUser(addr, 0x01, {
       from: env.roles.checkers.amlKyc
     });
+    await txReceipt(web3.eth, tx);
+  };
   // Accreditation
   console.log("Setting up accreditation");
   await ecosystem.s3.registerForAccreditation([
@@ -73,48 +76,34 @@ const configure = async () => {
   const Acc = web3.eth
     .contract(ABI.SimpleUserChecker.abi)
     .at(contracts.accreditation);
-  const confirmAccreditation = (addr: string) => {
-    Acc.confirmUser(addr, 0x02, {
+  const confirmAccreditation = async (addr: string) => {
+    const tx = Acc.confirmUser(addr, 0x02, {
       from: env.roles.checkers.accreditation
     });
+    await txReceipt(web3.eth, tx);
   };
   return { front, confirmKYC, confirmAccreditation };
 };
 
-const transferError = (
+const transferError = async (
   src: string,
   dest: string,
   front: string,
-  target: Errors.RegD,
-  done: () => void
+  target: Errors.RegD
 ) => {
   const T = web3.eth.contract(ABI.TokenFront.abi).at(front);
-  T.transfer(
-    dest,
-    1e2,
-    { from: src, gas: 5e5 },
-    (err: Error, txHash: string) => {
-      assert(err === null, "transfer tx should not revert");
-      setTimeout(() => {
-        web3.eth.getTransactionReceipt(txHash, (err: Error, receipt: any) => {
-          // FIXME: Make this less ad hoc
-          assert(receipt.logs.length === 1, "should generate 1 log message");
-          assert(
-            receipt.logs[0].topics[0].slice(2) === transferErrorSig,
-            "should generate the correct type of log message"
-          );
-          const errorCode = new BigNumber(
-            receipt.logs[0].data.slice(2 + 64),
-            16
-          );
-          assert(
-            errorCode.toNumber() === target,
-            "wrong reason " + errorCode.toString()
-          );
-          done();
-        });
-      }, 2e3);
-    }
+  const txHash = T.transfer(dest, 1e2, { from: src, gas: 5e5 });
+  const receipt = await txReceipt(web3.eth, txHash);
+  // FIXME: Make this less ad hoc
+  assert(receipt.logs.length === 1, "should generate 1 log message");
+  assert(
+    receipt.logs[0].topics[0].slice(2) === transferErrorSig,
+    "should generate the correct type of log message"
+  );
+  const errorCode = new BigNumber(receipt.logs[0].data.slice(2 + 64), 16);
+  assert(
+    errorCode.toNumber() === target,
+    "wrong reason " + errorCode.toString()
   );
 };
 
@@ -125,69 +114,46 @@ describe("Regulation D", () => {
     before(async () => {
       deployment = await configure();
     });
-    it("should prevent unverified (KYC) investors from selling", done => {
-      transferError(
+    it("should prevent unverified (KYC) investors from selling", async () => {
+      await transferError(
         env.roles.investor1,
         env.roles.investor2,
         deployment.front,
-        Errors.RegD.SellerAMLKYC,
-        done
+        Errors.RegD.SellerAMLKYC
       );
     }).timeout(15e3);
-    it("should prevent unverified (KYC) investors from buying", done => {
-      deployment.confirmKYC(env.roles.investor1);
-      setTimeout(() => {
-        transferError(
-          env.roles.investor1,
-          env.roles.investor2,
-          deployment.front,
-          Errors.RegD.BuyerAMLKYC,
-          done
-        );
-      }, 1e3);
-    }).timeout(15e3);
-    it("should prevent unaccredited buying", done => {
-      deployment.confirmKYC(env.roles.investor2);
-      transferError(
+    it("should prevent unverified (KYC) investors from buying", async () => {
+      await deployment.confirmKYC(env.roles.investor1);
+      await transferError(
         env.roles.investor1,
         env.roles.investor2,
         deployment.front,
-        Errors.RegD.Accreditation,
-        done
+        Errors.RegD.BuyerAMLKYC
       );
     }).timeout(15e3);
-    it("should allow a transfer", done => {
-      deployment.confirmAccreditation(env.roles.investor2);
-      setTimeout(() => {
-        const T = web3.eth.contract(ABI.TokenFront.abi).at(deployment.front);
-        T.transfer(
-          env.roles.investor2,
-          1e2,
-          { from: env.roles.investor1 },
-          (err: Error, txHash: string) => {
-            assert(err === null, "tx should go through");
-            setTimeout(() => {
-              web3.eth.getTransactionReceipt(
-                txHash,
-                (err: Error, receipt: any) => {
-                  assert(err === null, "should get tx receipt");
-                  assert(receipt.status === txSuccess, "call should succeed");
-                  console.log(receipt);
-                  assert(
-                    receipt.logs.length === 1,
-                    "should be one log message"
-                  );
-                  assert(
-                    receipt.logs[0].topics[0].slice(2) === transferSig,
-                    "should be a Transfer event"
-                  );
-                  done();
-                }
-              );
-            }, 2e3);
-          }
-        );
-      }, 2e3);
+    it("should prevent unaccredited buying", async () => {
+      await deployment.confirmKYC(env.roles.investor2);
+      await transferError(
+        env.roles.investor1,
+        env.roles.investor2,
+        deployment.front,
+        Errors.RegD.Accreditation
+      );
+    }).timeout(15e3);
+    it("should allow a transfer", async () => {
+      await deployment.confirmAccreditation(env.roles.investor2);
+      const T = web3.eth.contract(ABI.TokenFront.abi).at(deployment.front);
+      const tx = T.transfer(env.roles.investor2, 1e2, {
+        from: env.roles.investor1
+      });
+      const receipt = await txReceipt(web3.eth, tx);
+      assert(receipt.status === txSuccess, "call should succeed");
+      console.log(receipt);
+      assert(receipt.logs.length === 1, "should be one log message");
+      assert(
+        receipt.logs[0].topics[0].slice(2) === transferSig,
+        "should be a Transfer event"
+      );
     }).timeout(15e3);
   });
   describe("limits", function() {
