@@ -11,6 +11,11 @@ makes it possible for securities issuers to automate compliance with the SEC
 rules governing their class of securities, and to roll over into other classes
 as and when the rules allow. 
 
+Contributing
+--
+
+If you would like to contribute, please see `contributing.md` before you begin.
+
 Contract overview 
 --
 
