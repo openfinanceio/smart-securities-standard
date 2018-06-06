@@ -12,7 +12,8 @@
     "@cfxmarkets/vendor-types": "1.0.0",
     "@types/lodash": "^4.14.107",
     "@types/mocha": "^2.2.48",
-    "mocha": "^5.0.1"
+    "mocha": "^5.0.1",
+    "typescript": "^2.8.3"
   },
   "dependencies": {
     "@0xproject/web3-wrapper": "^0.6.1",

@@ -15,6 +15,7 @@ Contributing
 --
 
 If you would like to contribute, please see `contributing.md` before you begin.
+Then, take a look at the setup instructions below.
 
 Contract overview 
 --
@@ -126,3 +127,7 @@ Moving value into and out of S3
 We provide the contracts `Importer.sol` and `Exporter.sol` in order to make it
 easy to move value between S3 and other frameworks.
 
+Setting up S3 for development
+==
+
+WIP
