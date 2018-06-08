@@ -59,7 +59,7 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
   {
     bool newShareholder = this.balanceOf(_to) == 0;
     bool loseShareholder = this.balanceOf(_from) == _value;
-
+    
     if (newShareholder && !loseShareholder) 
       return (shareholderCount + 1, isFund);
 
@@ -67,7 +67,6 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
       return (shareholderCount - 1, isFund);
 
     return (shareholderCount, isFund);
-   
   }
   
   ///
@@ -76,11 +75,13 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
     public 
     returns (bool) 
   {
-    (uint16 newCount,) = query(msg.sender, _to, _value);
-    bool transferResult = super.transfer(_to, _value, sender);
-    if (transferResult && shareholderCount != newCount)
-      shareholderCount = newCount;
-    return transferResult;
+    (uint16 newCount,) = query(sender, _to, _value);
+    if (super.transfer(_to, _value, sender)) {
+      if (shareholderCount != newCount) 
+        shareholderCount = newCount;
+      return true;
+    }
+    return false;
   }
 
   ///

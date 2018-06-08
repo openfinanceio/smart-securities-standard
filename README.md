@@ -53,6 +53,10 @@ Contract overview 
   the standard we actually restrict the number of accounts that have a positive
   balance.  _Note: An attacker may be able to DoS the investment community by
   buying shares under multiple accounts and exhausting the account allotment._
+- `TokenFront`:  In order to provide a single contract address where users can
+  send `ERC20` calls, a security should have a `TokenFront` which calls into
+  one or more other contracts which implement the rule check, keep relevant
+  state, etc. 
 
 How to use the contracts
 --
@@ -95,32 +99,6 @@ This regulation covers certain securities that can be traded by foreign investor
 
 - Both the seller and buyer must pass AML/KYC checks.
 - Both the seller and buyer must reside in a non-US jursidiction.
-
-Security Metadata
-==
-There is no need to store metadata about a security such as a human readable
-name on chain.  One simple strategy for coming to consensus about the correct
-metadata is for the network participants to pass around JSON documents of the
-form
-```typescript
-interface Metadata<A> {
-  sequence: number;
-  security: number;
-  data: A;
-  signature: ECDSASignature;
-}
-```
-The signing key should be the whose keyhash is associated to the security in
-`CapTables.addresses` and the signature should cover the derived document:
-```
-{
-  sequence: ...,
-  security: ...,
-  data: ...
-}
-```
-Users should define the current metadata as the document with the highest
-sequence number.
 
 Moving value into and out of S3
 ==

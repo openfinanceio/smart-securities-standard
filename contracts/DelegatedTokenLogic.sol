@@ -52,7 +52,6 @@ contract DelegatedTokenLogic is Ownable, DelegatedERC20 {
     returns (bool) 
   {
     require(_to != address(0));
-
     ICapTables(capTables).transfer(index, sender, _to, _value);
     return true;
   }

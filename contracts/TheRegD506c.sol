@@ -70,13 +70,13 @@ contract TheRegD506c is RegD506c, TransferRestrictor, Ownable() {
       issuanceDate[msg.sender] = now;
   }
 
-  ///
-  /// Test whether or not a token transfer is compliant
-  function test(address _from, address _to, uint256 _value, address _token) 
-    external 
-    returns (uint16) 
+  function checkInvariants(
+    address _from,
+    address _to,
+    uint256 _value,
+    address _token
+  ) internal view returns (uint16) 
   {
-
     // The security cannot be transfered until after its holding period 
     if (issuanceDate[_token] != 0 && now < issuanceDate[_token] + holdingPeriod)
       return uint16(ErrorCode.HoldingPeriod);
@@ -86,22 +86,43 @@ contract TheRegD506c is RegD506c, TransferRestrictor, Ownable() {
     if ((isFund && newShareholderCount > 99) 
       || newShareholderCount > 2000)
       return uint16(ErrorCode.ShareholderMaximum);
+    return uint16(ErrorCode.Ok);
+  }
+
+  function checkBuyer(
+    address _to,
+    address _token
+  ) internal view returns (uint16)
+  {
+    // The buyer must pass AMLKYC
+    if (!amlkyc(_to, _token))
+      return uint16(ErrorCode.BuyerAMLKYC);
+    // The buyer must be an accredited investor 
+    if (!UserChecker(accreditationChecker[_token]).confirmed(_to))
+      return uint16(ErrorCode.Accreditation);
+    return uint16(ErrorCode.Ok);
+  }
+
+  ///
+  /// Test whether or not a token transfer is compliant
+  function test(address _from, address _to, uint256 _value, address _token) 
+    external 
+    returns (uint16) 
+  {
+    uint16 buyer = checkBuyer(_to, _token); 
+    if (buyer != uint16(ErrorCode.Ok))
+      return buyer;
 
     // The seller must pass AMLKYC 
     if (!amlkyc(_from, _token))
       return uint16(ErrorCode.SellerAMLKYC);
 
-    // The buyer must pass AMLKYC
-    if (!amlkyc(_to, _token))
-      return uint16(ErrorCode.BuyerAMLKYC);
-
-    // The buyer must be an accredited investor 
-    if (!accreditation(_to, _token))
-      return uint16(ErrorCode.Accreditation);
+    uint16 invariants = checkInvariants(_from, _to, _value, _token);
+    if (invariants != uint16(ErrorCode.Ok))
+      return invariants;
 
     // All checks passed
     return uint16(ErrorCode.Ok);
-
   }
 
   /// 
@@ -112,16 +133,6 @@ contract TheRegD506c is RegD506c, TransferRestrictor, Ownable() {
     returns (bool) 
   {
     return UserChecker(amlkycChecker[_token]).confirmed(_user);
-  }
-
-  ///
-  /// Confirm accredited investor status with the associated checker
-  function accreditation(address _user, address _token)
-    internal
-    view
-    returns (bool)
-  {
-    return UserChecker(accreditationChecker[_token]).confirmed(_user);
   }
 
 }
