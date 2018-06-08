@@ -21,7 +21,6 @@ contract ARegSToken is RegSToken, RestrictedTokenLogic {
   )
     public
   {
-    totalSupply_ = supply; 
     restrictor = restrictor_;
     owner = msg.sender;
 

@@ -1,5 +1,5 @@
 import { ABI } from "../src/Contracts";
-import { environment } from "./fixtures";
+import { assertSuccess, environment } from "./Support";
 
 import * as assert from "assert";
 import { BigNumber } from "bignumber.js";
@@ -21,15 +21,18 @@ describe("CapTables", () => {
       const CT = web3.eth
         .contract(ABI.CapTables.abi)
         .at(contractAddress as string);
-      const tx1 = CT.initialize(new BigNumber(1e5), env.roles.issuer, {
+      const amount1 = new BigNumber(1e5);
+      const tx1 = CT.initialize(amount1, env.roles.issuer, {
         from: env.roles.controller,
         gas: 5e5
       });
       const rec0 = await txReceipt(web3.eth, tx1);
-      assert(rec0.status === "0x1", "initialize success");
+      assertSuccess(rec0);
       assert(rec0.logs.length === 1, "log length");
       const id0 = new BigNumber(rec0.logs[0].data.slice(2), 16);
       assert(id0.equals(0), "id 1");
+      const bal = CT.balanceOf.call(id0, env.roles.issuer);
+      assert(bal.equals(amount1), "balance");
       const tx2 = CT.initialize(1e20, env.roles.investor1, {
         from: env.roles.controller,
         gas: 5e5
@@ -70,7 +73,7 @@ describe("CapTables", () => {
         { from: env.roles.issuer }
       );
       const rec1 = await txReceipt(web3.eth, tx1);
-      assert(rec1.status === "0x1", "the transaction should succeed");
+      assertSuccess(rec1);
     }).timeout(10e3);
   });
 });

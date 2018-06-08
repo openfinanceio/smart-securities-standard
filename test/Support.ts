@@ -1,4 +1,6 @@
+import * as assert from "assert";
 import { BigNumber } from "bignumber.js";
+import { TransactionReceipt } from "ethereum-types";
 import * as Web3 from "web3";
 
 import { RegD } from "../src/Types";
@@ -43,4 +45,13 @@ export const environment = (web3: Web3) => {
       return s;
     }
   };
+};
+
+export const assertSuccess = (receipt: TransactionReceipt) => {
+  assert(
+    receipt.status === "0x1" || // geth
+    receipt.status === 1 || // ganache-cli
+      receipt.status === "0x01", // ganache-cli
+    "transaction should succeed"
+  );
 };

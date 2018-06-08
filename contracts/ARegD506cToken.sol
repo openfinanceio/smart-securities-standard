@@ -29,7 +29,6 @@ contract ARegD506cToken is RegD506cToken, RestrictedTokenLogic {
   )
     public
   {
-    totalSupply_ = supply; 
     shareholderCount = initialShareholderCount;
     isFund = isFund_;
 

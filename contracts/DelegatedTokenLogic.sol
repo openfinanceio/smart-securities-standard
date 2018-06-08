@@ -20,8 +20,6 @@ contract DelegatedTokenLogic is Ownable, DelegatedERC20 {
   */
   uint256 public index;
 
-  uint256 public totalSupply_;
-
   mapping (address => mapping (address => uint256)) internal allowed;
 
   modifier onlyFront() {
@@ -40,7 +38,7 @@ contract DelegatedTokenLogic is Ownable, DelegatedERC20 {
   * @dev total number of tokens in existence
   */
   function totalSupply() public view returns (uint256) {
-    return totalSupply_;
+    return ICapTables(capTables).totalSupply(index);
   }
 
   /**

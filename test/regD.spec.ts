@@ -1,4 +1,4 @@
-import * as fixtures from "./fixtures";
+import { assertSuccess, environment } from "./Support";
 import { ABI } from "../src/Contracts";
 import { Client } from "../src/S3";
 import { Errors } from "../src/Types";
@@ -11,9 +11,8 @@ import * as sha3 from "web3/lib/utils/sha3";
 
 const provider = new Web3.providers.HttpProvider("http://localhost:8545");
 const web3 = new Web3(provider);
-const txSuccess = "0x1";
 
-const env = fixtures.environment(web3);
+const env = environment(web3);
 const controller = env.roles.controller;
 
 const setup = async () => {
@@ -147,8 +146,7 @@ describe("Regulation D", () => {
         from: env.roles.investor1
       });
       const receipt = await txReceipt(web3.eth, tx);
-      assert(receipt.status === txSuccess, "call should succeed");
-      console.log(receipt);
+      assertSuccess(receipt);
       assert(receipt.logs.length === 1, "should be one log message");
       assert(
         receipt.logs[0].topics[0].slice(2) === transferSig,

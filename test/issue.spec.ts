@@ -2,7 +2,7 @@ import { ABI } from "../src/Contracts";
 import { Client } from "../src/S3";
 import { Security } from "../src/Types";
 
-import * as fixtures from "./fixtures";
+import { environment } from "./Support";
 
 import * as assert from "assert";
 import { BigNumber } from "bignumber.js";
@@ -10,7 +10,7 @@ import * as Web3 from "web3";
 
 const provider = new Web3.providers.HttpProvider("http://localhost:8545");
 const web3 = new Web3(provider);
-const env = fixtures.environment(web3);
+const env = environment(web3);
 const roles = env.roles;
 const controller = roles.controller;
 
