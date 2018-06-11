@@ -20,7 +20,7 @@ export function handleTransfers(
   startingIndex: BigNumber,
   eth: Web3.EthApi,
   decision: (tr: Transfer) => Promise<number>,
-  finalization: (txHash: string) => Promise<void>
+  finalization: (txHash: string, index: BigNumber) => Promise<void>
 ) {
   let workingIndex = new BigNumber(startingIndex);
   const transferQueue: Heap<TransferRequest> = new Heap(
@@ -28,6 +28,7 @@ export function handleTransfers(
       return a.index.comparedTo(b.index);
     }
   );
+  const knownIndices: Set<string> = new Set();
   const simplifiedLogic = eth.contract(SimplifiedLogic.abi).at(logicAddress);
   const filter = simplifiedLogic.TransferRequest(
     async (err: Error, log: { args: TransferRequest }) => {
@@ -36,11 +37,15 @@ export function handleTransfers(
         logError(err.message);
         return;
       }
-      if (log.args.index.lessThan(workingIndex)) {
+      if (
+        log.args.index.lessThan(workingIndex) ||
+        knownIndices.has(log.args.index.toString())
+      ) {
         // Presumably this is a replay of an old message
         return;
       }
       transferQueue.push(log.args);
+      knownIndices.add(log.args.index.toString());
       const resolve = async (txr: TransferRequest) => {
         const code = await decision(txr);
         const txResolve = simplifiedLogic.resolve(txr.index, code, {
@@ -51,7 +56,7 @@ export function handleTransfers(
         if (!success(recResolve)) {
           throw Error(`Resolution failed for ${txr.index}`);
         }
-        await finalization(txResolve);
+        await finalization(txResolve, txr.index);
       };
       while (
         transferQueue.size() > 0 &&
@@ -59,6 +64,7 @@ export function handleTransfers(
       ) {
         workingIndex = workingIndex.plus(1);
         const txr = transferQueue.pop();
+        knownIndices.delete(txr.index.toString());
         logInfo(`Handling ${txr.index.toString()}`);
         await resolve(txr);
       }
