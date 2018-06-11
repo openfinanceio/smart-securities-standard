@@ -91,7 +91,7 @@ const transferError = async (
   target: Errors.RegD
 ) => {
   const T = web3.eth.contract(ABI.TokenFront.abi).at(front);
-  const txHash = T.transfer(dest, 1e2, { from: src, gas: 5e5 });
+  const txHash = T.transfer(dest, 1e2, { from: src, gas: 1e6 });
   const receipt = await txReceipt(web3.eth, txHash);
   // FIXME: Make this less ad hoc
   assert(receipt.logs.length === 1, "should generate 1 log message");

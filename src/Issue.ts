@@ -26,7 +26,7 @@ export async function issue(
         {
           data: ABI.TokenFront.bytecode,
           from: controller,
-          gas: 7e5
+          gas: 3e6
         },
         (err: Error, instance: Web3.ContractInstance) => {
           if (!_.isNull(err)) {
@@ -56,7 +56,7 @@ export async function issue(
               {
                 data: ABI.ARegD506cToken.bytecode,
                 from: controller,
-                gas: 2e6
+                gas: 3e6
               },
               (err: Error, instance: Web3.ContractInstance) => {
                 if (!_.isNull(err)) {

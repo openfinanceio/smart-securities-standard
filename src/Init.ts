@@ -68,7 +68,7 @@ export async function initUserChecker(
       {
         from: controller,
         data: ABI.SimpleUserChecker.bytecode,
-        gas: 5e5
+        gas: 8e5
       },
       (err: Error, instance: Web3.ContractInstance) => {
         if (!_.isNull(err)) {

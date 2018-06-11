@@ -15,7 +15,7 @@ import * as assert from "assert";
 import { txReceipt } from "@cfxmarkets/web3-utils";
 
 describe("DelegatedTokenLogic", () => {
-  describe("Megatest", () => {
+  describe("Megatest (break me up)", () => {
     it("should deploy the mock and make a transfer", async () => {
       // CapTables
       const ctTx = web3.eth.contract(ABI.CapTables.abi).new({
