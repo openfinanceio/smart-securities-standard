@@ -59,6 +59,7 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
       _amount,
       _sender
     );
+    return false; // The transfer has not taken place yet
   }
   function transferFrom(
     address _src,
@@ -76,6 +77,7 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
       _amount,
       _sender
     );
+    return false; // The transfer has not taken place yet
   }
   function resolve(
     uint256 _index,

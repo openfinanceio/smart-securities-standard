@@ -36,9 +36,11 @@ contract TokenFront is ERC20, Ownable {
   }
   function approve(address spender, uint256 value) public returns (bool)
   {
-    tokenLogic.approve(spender, value, msg.sender);
-    emit Approval(msg.sender, spender, value);
-    return true;
+    if (tokenLogic.approve(spender, value, msg.sender)) {
+      emit Approval(msg.sender, spender, value);
+      return true;
+    }
+    return false;
   }
   function totalSupply() public view returns (uint256)
   {

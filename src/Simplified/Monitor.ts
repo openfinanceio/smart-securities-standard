@@ -9,7 +9,7 @@ export interface Transfer {
   src: Address;
   dest: Address;
   amount: BigNumber;
-  sender: Address;
+  spender: Address;
 }
 
 export type TransferRequest = Transfer & { index: BigNumber };
