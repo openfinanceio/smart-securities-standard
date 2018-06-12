@@ -17,8 +17,13 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
     uint256 amount;
     address spender;
   }
+  enum TransferStatus {
+    Unused,
+    Active,
+    Resolved
+  }
   mapping(uint256 => TokenTransfer) public pending;
-  mapping(uint256 => bool) public resolutionStatus;
+  mapping(uint256 => TransferStatus) public resolutionStatus;
   address public controller;
   event TransferRequest(
     uint256 index,
@@ -50,10 +55,11 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
     address _sender
   ) public onlyFront returns (bool) 
   {
-    uint256 index = nextIndex();
-    pending[index] = TokenTransfer(_sender, _dest, _amount, _sender);
+    uint256 txfrIndex = nextIndex();
+    pending[txfrIndex] = TokenTransfer(_sender, _dest, _amount, _sender);
+    resolutionStatus[txfrIndex] = TransferStatus.Active;
     emit TransferRequest(
-      index,
+      txfrIndex,
       _sender,
       _dest,
       _amount,
@@ -68,10 +74,11 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
     address _sender
   ) public onlyFront returns (bool)
   {
-    uint index = nextIndex();
-    pending[index] = TokenTransfer(_src, _dest, _amount, _sender);
+    uint txfrIndex = nextIndex();
+    pending[txfrIndex] = TokenTransfer(_src, _dest, _amount, _sender);
+    resolutionStatus[txfrIndex] = TransferStatus.Active;
     emit TransferRequest(
-      index,
+      txfrIndex,
       _src,
       _dest,
       _amount,
@@ -80,12 +87,12 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
     return false; // The transfer has not taken place yet
   }
   function resolve(
-    uint256 _index,
+    uint256 _txfrIndex,
     uint16 _code 
   ) public onlyOwner returns (bool result)
   {
-    require(!resolutionStatus[_index]);
-    TokenTransfer storage tfr = pending[_index];
+    require(resolutionStatus[_txfrIndex] == TransferStatus.Active);
+    TokenTransfer storage tfr = pending[_txfrIndex];
     result = false;
     if (_code == 0) {
       result = true;
@@ -99,9 +106,9 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
         allowed[tfr.src][tfr.spender] = allowed[tfr.src][tfr.spender].sub(tfr.amount);
       }
     } 
-    delete pending[_index];
-    resolutionStatus[_index] = true;
-    emit TransferResult(_index, _code);
+    delete pending[_txfrIndex];
+    resolutionStatus[_txfrIndex] = TransferStatus.Resolved;
+    emit TransferResult(_txfrIndex, _code);
     return result;
   }
 }
