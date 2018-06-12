@@ -38,30 +38,18 @@ const test = async (n: number) => {
   );
   if (n == 2) {
     const decision = (tr: TransferRequest) => {
-      console.log("decision");
       assert.equal(tr.src, env.roles.investor1, "src");
       assert.equal(tr.dest, env.roles.investor3, "dest");
       assert(tr.amount.equals(1e2), "amount");
       assert.equal(tr.spender, tr.src, "spender");
       return Promise.resolve(0);
     };
+    let finalized = false;
     const finalization = async (txHash: string, index: BigNumber) => {
-      console.log("finalize", txHash, index.toString());
-      // Check the balances
-      const tokenFront = web3.eth.contract(ABI.TokenFront.abi).at(front);
-      const bal1 = tokenFront.balanceOf.call(env.roles.investor1);
-      assert(
-        bal1.equals(security.investors[0].amount.sub(1e2)),
-        "token balance 1"
-      );
-      const bal2 = tokenFront.balanceOf.call(env.roles.investor2);
-      assert(bal2.equals(security.investors[1].amount), "token balance 2");
-      const bal3 = tokenFront.balanceOf.call(env.roles.investor3);
-      assert(bal3.equals(1e2), "token balance 3");
-      return;
+      finalized = true;
     };
-    const tokenFront = web3.eth.contract(ABI.TokenFront.abi).at(front);
     console.log("Attempting the transfer");
+    const tokenFront = web3.eth.contract(ABI.TokenFront.abi).at(front);
     const txTransfer = tokenFront.transfer(
       env.roles.investor3,
       new BigNumber(1e2),
@@ -81,30 +69,28 @@ const test = async (n: number) => {
       finalization
     );
     assert(nextTxfrIndex.equals(1), "next transfer index");
+    assert(finalized, "finalized");
+    const bal1 = tokenFront.balanceOf.call(env.roles.investor1);
+    assert(
+      bal1.equals(security.investors[0].amount.sub(1e2)),
+      "token balance 1"
+    );
+    const bal2 = tokenFront.balanceOf.call(env.roles.investor2);
+    assert(bal2.equals(security.investors[1].amount), "token balance 2");
+    const bal3 = tokenFront.balanceOf.call(env.roles.investor3);
+    assert(bal3.equals(1e2), "token balance 3");
   } else if (n == 3) {
     const decision = (tr: TransferRequest) => {
-      console.log("decision");
       return Promise.resolve(1);
     };
     const finalization = async (txHash: string, index: BigNumber) => {
-      console.log("finalize", txHash, index.toString());
       const rec = await txReceipt(web3.eth, txHash);
       assert.equal(rec.logs.length, 1, "log length");
       assert(
         new BigNumber(rec.logs[0].data.slice(2), 16).equals(1),
         "error code"
       );
-      // Check the balances
-      const tokenFront = web3.eth.contract(ABI.TokenFront.abi).at(front);
-      const bal1 = tokenFront.balanceOf.call(env.roles.investor1);
-      assert(bal1.equals(security.investors[0].amount), "token balance 1");
-      const bal2 = tokenFront.balanceOf.call(env.roles.investor2);
-      assert(bal2.equals(security.investors[1].amount), "token balance 2");
-      const bal3 = tokenFront.balanceOf.call(env.roles.investor3);
-      assert(bal3.equals(0), "token balance 3");
-      return;
     };
-    console.log("Setting up transfer handler");
     const tokenFront = web3.eth.contract(ABI.TokenFront.abi).at(front);
     console.log("Attempting the transfer");
     const txTransfer = tokenFront.transfer(
@@ -125,18 +111,27 @@ const test = async (n: number) => {
       decision,
       finalization
     );
+    // Check the balances
+    const bal1 = tokenFront.balanceOf.call(env.roles.investor1);
+    assert(bal1.equals(security.investors[0].amount), "token balance 1");
+    const bal2 = tokenFront.balanceOf.call(env.roles.investor2);
+    assert(bal2.equals(security.investors[1].amount), "token balance 2");
+    const bal3 = tokenFront.balanceOf.call(env.roles.investor3);
+    assert(bal3.equals(0), "token balance 3");
   } else if (n == 4) {
     const decision = (tr: TransferRequest) => {
-      console.log("decision");
       const result = tr.index.equals(1) ? 1 : 0;
       return Promise.resolve(result);
     };
     const finalization = async (txHash: string, index: BigNumber) => {
-      console.log("finalize", txHash, index.toString());
       const rec = await txReceipt(web3.eth, txHash);
       assert.equal(rec.logs.length, 1, "log length");
-      const errorCode = new BigNumber(rec.logs[0].data.slice(2), 16);
-      return;
+      const data = rec.logs[0].data;
+      const observedIndex = new BigNumber(data.slice(2, 2 + 64), 16);
+      assert(index.equals(observedIndex), "indices");
+      const errorCode = new BigNumber(data.slice(2 + 64), 16);
+      const targetCode = index.equals(1) ? 1 : 0;
+      assert.equal(errorCode.toNumber(), targetCode, "error code");
     };
     console.log("Setting up transfer handler");
     const tokenFront = web3.eth.contract(ABI.TokenFront.abi).at(front);
