@@ -1,7 +1,6 @@
 import { SimplifiedLogic } from "./Contracts";
 import { Address } from "../Types";
 import { BigNumber } from "bignumber.js";
-import Heap = require("heap");
 import * as Web3 from "web3";
 import { success, txReceipt } from "@cfxmarkets/web3-utils";
 

@@ -1,6 +1,7 @@
 {
   "name": "@openfinance/smart-securities-standard",
   "version": "0.1.2",
+  "main": "dist/src/index.js",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -14,7 +15,6 @@
   "devDependencies": {
     "@0xproject/typescript-typings": "0.3.2",
     "@cfxmarkets/vendor-types": "^1.0.0",
-    "@types/heap": "latest",
     "@types/lodash": "^4.14.107",
     "@types/mocha": "^2.2.48",
     "ethereum-types": "^0.0.2",
@@ -25,7 +25,6 @@
     "@0xproject/web3-wrapper": "^0.6.1",
     "@cfxmarkets/web3-utils": "*",
     "bignumber.js": "^5.0.0",
-    "heap": "^0.2.6",
     "lodash": "^4.17.5",
     "web3": "^0.20.4"
   }
