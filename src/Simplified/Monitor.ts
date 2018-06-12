@@ -53,11 +53,3 @@ export async function handleTransfers(
   }
   return workingIndex;
 }
-
-function logError(msg: string) {
-  console.log(msg);
-}
-
-function logInfo(msg: string) {
-  console.log(msg);
-}
