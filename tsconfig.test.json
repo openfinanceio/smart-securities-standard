@@ -17,7 +17,6 @@
     "types": [
       "@0xproject/typescript-typings/types/web3",
       "@cfxmarkets/vendor-types",
-      "heap",
       "node",
       "mocha"
     ]
