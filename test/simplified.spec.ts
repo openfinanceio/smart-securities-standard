@@ -45,7 +45,6 @@ const test = async (n: number) => {
       assert.equal(tr.spender, tr.src, "spender");
       return Promise.resolve(0);
     };
-    let filter: any;
     const finalization = async (txHash: string, index: BigNumber) => {
       console.log("finalize", txHash, index.toString());
       // Check the balances
@@ -61,15 +60,6 @@ const test = async (n: number) => {
       assert(bal3.equals(1e2), "token balance 3");
       return;
     };
-    console.log("Setting up transfer handler");
-    filter = handleTransfers(
-      middleware,
-      env.roles.controller,
-      new BigNumber(0),
-      web3.eth,
-      decision,
-      finalization
-    );
     const tokenFront = web3.eth.contract(ABI.TokenFront.abi).at(front);
     console.log("Attempting the transfer");
     const txTransfer = tokenFront.transfer(
@@ -82,15 +72,20 @@ const test = async (n: number) => {
     );
     const recTransfer = await txReceipt(web3.eth, txTransfer);
     assert(success(recTransfer), "transfer should succeed");
-    setTimeout(() => {
-      filter.stopWatching();
-    }, 1e3);
+    const nextTxfrIndex = await handleTransfers(
+      middleware,
+      env.roles.controller,
+      new BigNumber(0),
+      web3.eth,
+      decision,
+      finalization
+    );
+    assert(nextTxfrIndex.equals(1), "next transfer index");
   } else if (n == 3) {
     const decision = (tr: TransferRequest) => {
       console.log("decision");
       return Promise.resolve(1);
     };
-    let filter: any;
     const finalization = async (txHash: string, index: BigNumber) => {
       console.log("finalize", txHash, index.toString());
       const rec = await txReceipt(web3.eth, txHash);
@@ -107,18 +102,9 @@ const test = async (n: number) => {
       assert(bal2.equals(security.investors[1].amount), "token balance 2");
       const bal3 = tokenFront.balanceOf.call(env.roles.investor3);
       assert(bal3.equals(0), "token balance 3");
-      filter.stopWatching();
       return;
     };
     console.log("Setting up transfer handler");
-    filter = handleTransfers(
-      middleware,
-      env.roles.controller,
-      new BigNumber(0),
-      web3.eth,
-      decision,
-      finalization
-    );
     const tokenFront = web3.eth.contract(ABI.TokenFront.abi).at(front);
     console.log("Attempting the transfer");
     const txTransfer = tokenFront.transfer(
@@ -131,6 +117,14 @@ const test = async (n: number) => {
     );
     const recTransfer = await txReceipt(web3.eth, txTransfer);
     assert(success(recTransfer), "transfer should succeed");
+    await handleTransfers(
+      middleware,
+      env.roles.controller,
+      new BigNumber(0),
+      web3.eth,
+      decision,
+      finalization
+    );
   } else if (n == 4) {
     const decision = (tr: TransferRequest) => {
       console.log("decision");

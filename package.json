@@ -5,7 +5,7 @@
   "scripts": {
     "build": "scripts/build",
     "compile": "scripts/compile",
-    "test": "tsc -p tsconfig.test.json && mocha dist/test"
+    "test": "tsc -p tsconfig.test.json && mocha dist/test/*.spec.js"
   },
   "devDependencies": {
     "@0xproject/typescript-typings": "0.3.2",
