@@ -1,7 +1,11 @@
 {
-  "name": "smart-securities-standard",
+  "name": "@openfinance/smart-securities-standard",
   "version": "0.1.2",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OpenFinanceIO/smart-securities-standard"
+  },
   "scripts": {
     "build": "scripts/build",
     "compile": "scripts/compile",

@@ -25,6 +25,7 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
   mapping(uint256 => TokenTransfer) public pending;
   mapping(uint256 => TransferStatus) public resolutionStatus;
   address public controller;
+  bool public contractActive = true;
   event TransferRequest(
     uint256 index,
     address src,
@@ -36,6 +37,10 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
     uint256 index,
     uint16 code
   );
+  modifier onlyActive () {
+    require(contractActive);
+    _;
+  }
   constructor(
     address _controller,
     address _capTables
@@ -53,7 +58,7 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
     address _dest,
     uint256 _amount,
     address _sender
-  ) public onlyFront returns (bool) 
+  ) public onlyFront onlyActive returns (bool) 
   {
     uint256 txfrIndex = nextIndex();
     pending[txfrIndex] = TokenTransfer(_sender, _dest, _amount, _sender);
@@ -72,8 +77,9 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
     address _dest,
     uint256 _amount,
     address _sender
-  ) public onlyFront returns (bool)
+  ) public onlyFront onlyActive returns (bool)
   {
+    require(_amount <= allowed[_src][_sender]);
     uint txfrIndex = nextIndex();
     pending[txfrIndex] = TokenTransfer(_src, _dest, _amount, _sender);
     resolutionStatus[txfrIndex] = TransferStatus.Active;
@@ -101,7 +107,6 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
         ICapTables(capTables).transfer(index, tfr.src, tfr.dest, tfr.amount);
       } else {
         // Requires an allowance
-        require(tfr.amount <= allowed[tfr.src][tfr.spender]);
         ICapTables(capTables).transfer(index, tfr.src, tfr.dest, tfr.amount);
         allowed[tfr.src][tfr.spender] = allowed[tfr.src][tfr.spender].sub(tfr.amount);
       }
@@ -110,5 +115,12 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
     resolutionStatus[_txfrIndex] = TransferStatus.Resolved;
     emit TransferResult(_txfrIndex, _code);
     return result;
+  }
+  function migrate(
+    address newLogic
+  ) public onlyOwner 
+  {
+    contractActive = false;
+    ICapTables(capTables).migrate(index, newLogic);
   }
 }

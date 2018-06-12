@@ -91,7 +91,7 @@ export async function initToken(
     .new(controller, capTables, {
       data: SimplifiedLogic.bytecode,
       from: controller,
-      gas: 1e6
+      gas: 1.5e6
     });
   const recSimplifiedLogic = await txReceipt(
     eth,
