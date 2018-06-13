@@ -44,10 +44,10 @@ const test = async (n: number) => {
       assert.equal(tr.dest, env.roles.investor3, "dest");
       assert(tr.amount.equals(1e2), "amount");
       assert.equal(tr.spender, tr.src, "spender");
-      return Promise.resolve(0);
+      return Promise.resolve([0, tr]) as Promise<[number, TransferRequest]>;
     };
     let finalized = false;
-    const finalization = async (txr: TransferRequest, txHash: string) => {
+    const finalization = async (txHash: string, txr: TransferRequest) => {
       finalized = true;
     };
     console.log("Attempting the transfer");
@@ -83,9 +83,9 @@ const test = async (n: number) => {
     assert(bal3.equals(1e2), "token balance 3");
   } else if (n == 3) {
     const decision = (tr: TransferRequest) => {
-      return Promise.resolve(1);
+      return Promise.resolve([1, tr]) as Promise<[number, TransferRequest]>;
     };
-    const finalization = async (txr: TransferRequest, txHash: string) => {
+    const finalization = async (txHash: string, txr: TransferRequest) => {
       const rec = await txReceipt(web3.eth, txHash);
       assert.equal(rec.logs.length, 1, "log length");
       assert(
@@ -123,9 +123,11 @@ const test = async (n: number) => {
   } else if (n >= 4) {
     const decision = (tr: TransferRequest) => {
       const result = tr.index.equals(1) ? 1 : 0;
-      return Promise.resolve(result);
+      return Promise.resolve([result, tr]) as Promise<
+        [number, TransferRequest]
+      >;
     };
-    const finalization = async (txr: TransferRequest, txHash: string) => {
+    const finalization = async (txHash: string, txr: TransferRequest) => {
       const rec = await txReceipt(web3.eth, txHash);
       assert.equal(rec.logs.length, 1, "log length");
       const data = rec.logs[0].data;
