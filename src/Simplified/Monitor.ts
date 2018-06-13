@@ -25,7 +25,7 @@ export async function handleTransfers(
   startingIndex: BigNumber,
   eth: Web3.EthApi,
   decision: (tr: Transfer) => Promise<number>,
-  finalization: (txHash: string, index: BigNumber) => Promise<void>
+  finalization: (txr: TransferRequest, txHash: string) => Promise<void>
 ): Promise<BigNumber> {
   const simplifiedLogic = eth.contract(SimplifiedLogic.abi).at(logicAddress);
   let workingIndex = new BigNumber(startingIndex);
@@ -47,7 +47,7 @@ export async function handleTransfers(
     if (!success(recResolve)) {
       throw Error(`Resolution failed for ${txr.index}`);
     }
-    await finalization(txResolve, txr.index);
+    await finalization(txr, txResolve);
     workingIndex = workingIndex.plus(1);
   }
   return workingIndex;

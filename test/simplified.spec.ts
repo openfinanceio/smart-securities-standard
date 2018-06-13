@@ -47,7 +47,7 @@ const test = async (n: number) => {
       return Promise.resolve(0);
     };
     let finalized = false;
-    const finalization = async (txHash: string, index: BigNumber) => {
+    const finalization = async (txr: TransferRequest, txHash: string) => {
       finalized = true;
     };
     console.log("Attempting the transfer");
@@ -85,7 +85,7 @@ const test = async (n: number) => {
     const decision = (tr: TransferRequest) => {
       return Promise.resolve(1);
     };
-    const finalization = async (txHash: string, index: BigNumber) => {
+    const finalization = async (txr: TransferRequest, txHash: string) => {
       const rec = await txReceipt(web3.eth, txHash);
       assert.equal(rec.logs.length, 1, "log length");
       assert(
@@ -125,14 +125,14 @@ const test = async (n: number) => {
       const result = tr.index.equals(1) ? 1 : 0;
       return Promise.resolve(result);
     };
-    const finalization = async (txHash: string, index: BigNumber) => {
+    const finalization = async (txr: TransferRequest, txHash: string) => {
       const rec = await txReceipt(web3.eth, txHash);
       assert.equal(rec.logs.length, 1, "log length");
       const data = rec.logs[0].data;
       const observedIndex = new BigNumber(data.slice(2, 2 + 64), 16);
-      assert(index.equals(observedIndex), "indices");
+      assert(txr.index.equals(observedIndex), "indices");
       const errorCode = new BigNumber(data.slice(2 + 64), 16);
-      const targetCode = index.equals(1) ? 1 : 0;
+      const targetCode = txr.index.equals(1) ? 1 : 0;
       assert.equal(errorCode.toNumber(), targetCode, "error code");
     };
     console.log("Setting up transfer handler");
