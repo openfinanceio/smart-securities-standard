@@ -11,7 +11,8 @@
   "scripts": {
     "build": "scripts/build",
     "compile": "scripts/compile",
-    "test": "tsc -p tsconfig.test.json && mocha dist/test/*.spec.js"
+    "make-docs": "typedoc --mode modules --out ./docs",
+    "test": "tsc -p tsconfig.test.json && mocha dist/test/*.spec.js src/"
   },
   "devDependencies": {
     "@0xproject/typescript-typings": "0.3.2",
@@ -25,7 +26,7 @@
   "dependencies": {
     "@0xproject/web3-wrapper": "^0.6.1",
     "@cfxmarkets/web3-utils": "*",
-    "bignumber.js": "^5.0.0",
+    "bignumber.js": "^7.2.0",
     "lodash": "^4.17.5",
     "web3": "^0.20.4"
   }
