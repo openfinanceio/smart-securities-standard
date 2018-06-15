@@ -5,3 +5,4 @@ export {
   TransferRequest,
   handleTransfers
 } from "./Simplified/Monitor";
+export { BigNumber } from "bignumber.js";
