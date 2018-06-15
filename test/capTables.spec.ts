@@ -8,13 +8,14 @@ import * as Web3 from "web3";
 
 const web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
 const env = environment(web3);
+const controller = env.roles.controller;
 
 describe("CapTables", () => {
   describe("initialize", () => {
     it("should initialize a security", async () => {
       const { transactionHash } = web3.eth.contract(ABI.CapTables.abi).new({
         data: ABI.CapTables.bytecode,
-        from: env.roles.controller,
+        from: controller,
         gas: 5e5
       });
       const { contractAddress } = await txReceipt(web3.eth, transactionHash);
@@ -23,7 +24,7 @@ describe("CapTables", () => {
         .at(contractAddress as string);
       const amount1 = new BigNumber(1e5);
       const tx1 = CT.initialize(amount1, env.roles.issuer, {
-        from: env.roles.controller,
+        from: controller,
         gas: 5e5
       });
       const rec0 = await txReceipt(web3.eth, tx1);
@@ -34,7 +35,7 @@ describe("CapTables", () => {
       const bal = CT.balanceOf.call(id0, env.roles.issuer);
       assert(bal.equals(amount1), "balance");
       const tx2 = CT.initialize(1e20, env.roles.investor1, {
-        from: env.roles.controller,
+        from: controller,
         gas: 5e5
       });
       const rec1 = await txReceipt(web3.eth, tx2);
@@ -43,7 +44,33 @@ describe("CapTables", () => {
     }).timeout(10e3);
   });
   describe("migrate", () => {
-    it("should migrate a security");
+    it("should migrate a security", async () => {
+      const { transactionHash } = web3.eth.contract(ABI.CapTables.abi).new({
+        data: ABI.CapTables.bytecode,
+        from: controller,
+        gas: 5e5
+      });
+      const { contractAddress } = await txReceipt(web3.eth, transactionHash);
+      const CT = web3.eth
+        .contract(ABI.CapTables.abi)
+        .at(contractAddress as string);
+      const amount1 = new BigNumber(1e5);
+      const tx1 = CT.initialize(amount1, env.roles.issuer, {
+        from: controller,
+        gas: 5e5
+      });
+      const rec0 = await txReceipt(web3.eth, tx1);
+      assertSuccess(rec0);
+      const newManager = web3.eth.accounts[9];
+      const tx2 = CT.migrate(0, newManager, {
+        from: env.roles.issuer,
+        gas: 5e5
+      });
+      const rec2 = await txReceipt(web3.eth, tx2);
+      assertSuccess(rec2);
+      const observedManager = CT.addresses.call(0);
+      assert.equal(observedManager, newManager, "manager");
+    });
   });
   describe("transfer", function() {
     this.timeout(15e3);
@@ -52,13 +79,13 @@ describe("CapTables", () => {
     before(async () => {
       const { transactionHash } = web3.eth.contract(ABI.CapTables.abi).new({
         data: ABI.CapTables.bytecode,
-        from: env.roles.controller,
+        from: controller,
         gas: 1e6
       });
       const { contractAddress } = await txReceipt(web3.eth, transactionHash);
       CT = web3.eth.contract(ABI.CapTables.abi).at(contractAddress as string);
       const tx0 = CT.initialize(1e5, env.roles.issuer, {
-        from: env.roles.controller,
+        from: controller,
         gas: 5e5
       });
       const rec0 = await txReceipt(web3.eth, tx0);
