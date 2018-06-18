@@ -1,3 +1,4 @@
+export { SimplifiedLogic } from "./Simplified/Contracts";
 export { init } from "./Simplified/Init";
 export { issue } from "./Simplified/Issue";
 export {
@@ -6,3 +7,7 @@ export {
   handleTransfers
 } from "./Simplified/Monitor";
 export { BigNumber } from "bignumber.js";
+
+import { ABI, Artifact } from "./Contracts";
+
+export const TokenFront: Artifact = ABI.TokenFront;
