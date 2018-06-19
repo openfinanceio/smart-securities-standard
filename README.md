@@ -1,15 +1,20 @@
 ---
-version: 0.1.1
+version: 0.2.0
+status: experimental
 ---
 
 OpenFinance S3 - Smart Securities Standard
 ==
 
-This library contains contracts which reify particular SEC rules and
-exemptions, such as regulations A+, CF, D, and S.  The library architecture
-makes it possible for securities issuers to automate compliance with the SEC
-rules governing their class of securities, and to roll over into other classes
-as and when the rules allow. 
+Overview
+--
+
+S3 has grown out of the OpenFinance Network's efforts to automate certain
+aspects of running a compliant alternatives exchange.  Currently, it consists
+of a smart contract library and a typescript library for manipulating these
+contracts.  However, the full scope includes a standard protocol that exchanges
+an compliance providers can use to communicate in order to maintain the trading
+invariants required by the SEC for securities to keep their filing exemptions.
 
 Contributing
 --
@@ -17,66 +22,73 @@ Contributing
 If you would like to contribute, please see `contributing.md` before you begin.
 Then, take a look at the setup instructions below.
 
-Contract overview 
+Architecture
 --
 
-### Interfaces
+The _simplified_ S3 architecture provides a permissioned token with no rule
+checking on chain.  There are three classes of contracts.
 
-- `TransferRestrictor`:  A contract expressing rules about whether to approve or
-  block an ERC token transfer should implement this interface.  The contract
-  may use the information available at call time (value sender, value receiver,
-  and amount) as well as any additional information exposed through some
-  interface of the calling contract.
-- `UserChecker`:  Contracts which determine whether or not to block an account
-  from doing something should implement this interface. 
+- `CapTables`: All securities issued on S3 share this contract, which is only
+  responsible for being the single source of truth for cap tables.
+- `TokenFront`: This contract provides a fixed Ethereum address for a given
+  security.  All calls are forwarded to a contract expressing rule logic.
+- `SimpliedLogic`: This contract implements a two stage clearing and settlement
+  protocol.  Users create token transfer requests by calling `transfer` and
+  `transferFrom` on the associated `TokenFront`.  Then a third party resolves
+  each transfer request by providing an error code.  Only on error code `0` is
+  the transfer settled.
 
-### Concrete contracts
-
-- `CapTables`:  This contract maintains cap tables for a set of securities
-  identified by an integer index.  Each security is associated to an address,
-  which should be an ERC20 contract implementing the appropriate transfer
-  logic.
-- `RestrictedTokenLogic`:  This contract extends Open Zeppelin's ERC20
-  `StandardToken` contract, by allowing a `TransferRestrictor` to be configured
-  which is used to enforce some rule set.
-- `SimpleUserChecker`:  This contract implements the `UserChecker` interface.
-  It maintains a configurable list of agents who may confirm users by storing a
-  commitment (presumably a hash digest of a document) to user data.
-- `TheRegD506c`:  This contract implements regulation D 506 (c) rules.  To use
-  this as their `TransferRestrictor`, tokens must configure an AML/KYC provider
-  and an accredited investor status checker for themselves.  These contracts
-  must implement `UserChecker`.  Furthermore, the token contract must implement
-  `RegD506cToken`.
-- `ARegD506cToken`:  This contract implements the `RegD506cToken` interface,
-  which requires internal tracking of the number of active shareholders.  A
-  given shareholder may have multiple Ethereum accounts, but in this draft of
-  the standard we actually restrict the number of accounts that have a positive
-  balance.  _Note: An attacker may be able to DoS the investment community by
-  buying shares under multiple accounts and exhausting the account allotment._
-- `TokenFront`:  In order to provide a single contract address where users can
-  send `ERC20` calls, a security should have a `TokenFront` which calls into
-  one or more other contracts which implement the rule check, keep relevant
-  state, etc. 
+_Note: There are additional contracts in the library which directly reify
+regulation D and regulation S rules.  However, these contracts and their
+supporting TypeScript library are highly unstable._
 
 How to use the contracts
 --
 
-Issuance proceeds in several stages.
+Start by having a look at `src/Types.ts`.  To issue:
+
+
+```typescript
+import * as s3 from "@openfinance/smart-securities-standard";
+import { readFileSync, writeFileSync } from "fs";
+import * as Web3 from "web3";
+
+const capTablesAddress = readFileSync("soon-to-be-deployed-s3-capTables.address", "utf8");
+const security: s3.BaseSecurity = JSON.parse(readFileSync("mySecurity.json", "utf8"));
+
+const prov = new Web3.providers.HttpProvider("http://localhost:8545");
+const web3 = new Web3(prov);
+
+async function go() {
+  const record = await s3.issue(
+    security, 
+    capTablesAddress, 
+    deploymentAddress, 
+    Web3.eth
+  );
+  writeFileSync("my-deployment-record.json", JSON.stringify(record), "utf8");
+}
+
+go();
+```
+
+Manual issuance proceeds in several stages.
 
 - **Stage I.** Choose a deployed `CapTables` contract and send a transaction
   which calls `initialize` with your total supply.  This will create a new
   security, owned by the caller and will give you the index of the security.
   The caller will hold the entire balance.
-- **Stage II.**  Make calls to `CapTables.allocate` to configure the initial
+- **Stage II.**  Make calls to `CapTables.transfer` to configure the initial
   distribution of your security.
-- **Stage III.**  Deploy a contract such as `ARegD506cToken` or `ARegSToken`
-  that implements the ruleset you wish to apply.  These contracts require the
-  `CapTable` instance and security index as part of the initial configuration.
-  Now, call `migrate` to transfer control over the cap table to the token
-  contract.
-- **Stage IV.**  If you need to modify the rules that govern token transfers,
-  call `migrate` on the token contract with the address of the contract with
-  the new transfer controls.
+- **Stage III.** Deploy `SimplifiedLogic` to address `logicAddress`, then
+  deploy `TokenFront` with construction parameter `logiAddress`.  Call
+  `setFront` on `SimplifiedLogic` with the address of the `TokenFront` to
+  authorize it to call in. 
+- **Stage IV.** Make some provision to detect and resolve transfer requests.
+  `SimplifiedLogic` will log `TransferRequest` messages as users attempt to
+  move tokens around.
+- **Stage V.** If you need to modify the logic that governs token transfers,
+  use the `migrate` method of `CapTables` and `TokenFront`.
 
 Implemented Regulations
 ==
@@ -100,12 +112,9 @@ This regulation covers certain securities that can be traded by foreign investor
 - Both the seller and buyer must pass AML/KYC checks.
 - Both the seller and buyer must reside in a non-US jursidiction.
 
-Moving value into and out of S3
-==
-We provide the contracts `Importer.sol` and `Exporter.sol` in order to make it
-easy to move value between S3 and other frameworks.
-
 Setting up S3 for development
 ==
 
-WIP
+S3 can be set up like any `npm` package, except that it depends on an
+unpublished, experimental package `@cfxmarkets/web3-utils`.  Feel free to
+contact `Ian Shipman` for a current tarball.
