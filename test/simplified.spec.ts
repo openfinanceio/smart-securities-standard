@@ -105,7 +105,7 @@ const test = async (n: number) => {
     );
     const recTransfer = await txReceipt(web3.eth, txTransfer);
     assert(success(recTransfer), "transfer should succeed");
-    await handleTransfers(
+    const highestIndex = await handleTransfers(
       middleware,
       env.roles.controller,
       new BigNumber(0),
@@ -113,6 +113,7 @@ const test = async (n: number) => {
       decision,
       finalization
     );
+    assert(highestIndex.equals(1), "increment index");
     // Check the balances
     const bal1 = tokenFront.balanceOf.call(env.roles.investor1);
     assert(bal1.equals(security.investors[0].amount), "token balance 1");
