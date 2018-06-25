@@ -12,11 +12,14 @@ import { Ownable } from "./zeppelin-solidity/contracts/ownership/Ownable.sol";
  */
 contract TokenFront is ERC20, Ownable {
   DelegatedERC20 public tokenLogic;
-  constructor(DelegatedERC20 initialTokenLogic) 
+  constructor(
+    DelegatedERC20 _tokenLogic,
+    address _owner
+  ) 
     public
-    Ownable() 
   {
-    tokenLogic = initialTokenLogic;
+    owner = _owner;
+    tokenLogic = _tokenLogic; 
   }
   function migrate(DelegatedERC20 newTokenLogic) public onlyOwner
   {

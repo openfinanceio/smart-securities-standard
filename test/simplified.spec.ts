@@ -17,6 +17,7 @@ const web3 = new Web3(prov);
 
 const env = environment(web3);
 const controller = env.roles.controller;
+const owner = env.roles.securityOwner;
 
 const test = async (n: number) => {
   const capTables = await init(controller, web3.eth);
@@ -30,7 +31,7 @@ const test = async (n: number) => {
     ],
     issuer: env.roles.issuer,
     metadata: { name: "TheSecurity" },
-    owner: env.roles.securityOwner
+    owner: owner
   };
   const { front, middleware, securityId } = await issue(
     security,
@@ -64,7 +65,7 @@ const test = async (n: number) => {
     assert(success(recTransfer), "transfer should succeed");
     const nextTxfrIndex = await handleTransfers(
       middleware,
-      env.roles.controller,
+      owner,
       new BigNumber(0),
       web3.eth,
       decision,
@@ -107,7 +108,7 @@ const test = async (n: number) => {
     assert(success(recTransfer), "transfer should succeed");
     const highestIndex = await handleTransfers(
       middleware,
-      env.roles.controller,
+      controller,
       new BigNumber(0),
       web3.eth,
       decision,
@@ -172,7 +173,7 @@ const test = async (n: number) => {
     await txReceipt(web3.eth, txTransfer3);
     const nextTxfrIndex = await handleTransfers(
       middleware,
-      env.roles.controller,
+      controller,
       new BigNumber(0),
       web3.eth,
       decision,
@@ -202,7 +203,7 @@ const test = async (n: number) => {
       console.log("deploying new middleware");
       const txNewMiddleware = web3.eth
         .contract(SimplifiedLogic.abi)
-        .new(securityId, capTables, {
+        .new(securityId, capTables, owner, controller, {
           data: SimplifiedLogic.bytecode,
           from: controller,
           gas: 1.5e6
@@ -215,23 +216,23 @@ const test = async (n: number) => {
       const newMiddleware = web3.eth
         .contract(SimplifiedLogic.abi)
         .at(newMiddlewareAddress);
-      console.log("setting new front");
+      console.log("setting the front");
       const txNewSetFront = newMiddleware.setFront(front, {
-        from: controller,
+        from: owner,
         gas: 5e5
       });
       const recNewSetFront = await txReceipt(web3.eth, txNewSetFront);
       assert(success(recNewSetFront), "set new front");
       console.log("migrating old middleware");
       const txMigrate = oldMiddleware.migrate(newMiddlewareAddress, {
-        from: controller,
+        from: owner,
         gas: 5e5
       });
       const recMigrate = await txReceipt(web3.eth, txMigrate);
       assert(success(recMigrate), "migration");
       console.log("migrating front");
       const txFrontMigrate = tokenFront.migrate(newMiddlewareAddress, {
-        from: controller,
+        from: owner,
         gas: 5e5
       });
       const recFrontMigrate = await txReceipt(web3.eth, txFrontMigrate);
@@ -255,14 +256,14 @@ describe("Simplified s3", () => {
   });
   it("should transfer issued tokens", async () => {
     await test(2);
-  }).timeout(10e3);
+  })
   it("should block the transfer of issued tokens", async () => {
     await test(3);
-  }).timeout(10e3);
+  })
   it("should handle multiple transfers correctly", async () => {
     await test(4);
-  }).timeout(10e3);
+  })
   it("should migrate", async () => {
     await test(5);
-  }).timeout(10e3);
+  })
 });

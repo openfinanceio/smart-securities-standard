@@ -24,7 +24,7 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
   }
   mapping(uint256 => TokenTransfer) public pending;
   mapping(uint256 => TransferStatus) public resolutionStatus;
-  address public controller;
+  address public resolver;
   bool public contractActive = true;
   event TransferRequest(
     uint256 index,
@@ -42,17 +42,15 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
     _;
   }
   constructor(
-    address _controller,
-    address _capTables
-  ) public Ownable() {
-    controller = _controller;
+    uint256 _index,
+    address _capTables,
+    address _owner,
+    address _resolver
+  ) public {
+    index     = _index;
     capTables = _capTables;
-  }
-  function setController(
-    address _controller
-  ) public onlyOwner 
-  {
-    controller = _controller;
+    owner     = _owner;
+    resolver  = _resolver;
   }
   function transfer(
     address _dest,
@@ -95,8 +93,9 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
   function resolve(
     uint256 _txfrIndex,
     uint16 _code 
-  ) public onlyOwner returns (bool result)
+  ) public returns (bool result)
   {
+    require(msg.sender == resolver);
     require(resolutionStatus[_txfrIndex] == TransferStatus.Active);
     TokenTransfer storage tfr = pending[_txfrIndex];
     result = false;

@@ -21,6 +21,7 @@ export async function issue(
   const { front, middleware } = await initToken(
     securityId,
     capTables,
+    security.owner,
     controller,
     eth
   );
@@ -79,6 +80,7 @@ export async function initToken(
   this: void,
   securityId: SecurityId,
   capTables: Address,
+  owner: Address,
   controller: Address,
   eth: Web3.EthApi
 ): Promise<{
@@ -88,11 +90,17 @@ export async function initToken(
   logInfo("Deploying SimplifiedLogic");
   const txSimplifiedLogic = eth
     .contract(SimplifiedLogic.abi)
-    .new(controller, capTables, {
-      data: SimplifiedLogic.bytecode,
-      from: controller,
-      gas: 1.5e6
-    });
+    .new(
+      securityId,
+      capTables, 
+      owner,
+      controller,
+      {
+        data: SimplifiedLogic.bytecode,
+        from: controller,
+        gas: 1.5e6
+      }
+    );
   const recSimplifiedLogic = await txReceipt(
     eth,
     txSimplifiedLogic.transactionHash
@@ -109,11 +117,15 @@ export async function initToken(
   logInfo("Deploying the token front");
   const txFront = eth
     .contract(ABI.TokenFront.abi)
-    .new(recSimplifiedLogic.contractAddress, {
-      data: ABI.TokenFront.bytecode,
-      from: controller,
-      gas: 1e6
-    });
+    .new(
+      recSimplifiedLogic.contractAddress, 
+      owner,
+      {
+        data: ABI.TokenFront.bytecode,
+        from: controller,
+        gas: 1e6
+      }
+    );
   const recTokenFront = await txReceipt(eth, txFront.transactionHash);
   const front = recTokenFront.contractAddress as string;
   const simplifiedLogic = eth
@@ -121,7 +133,7 @@ export async function initToken(
     .at(simplifiedLogicAddress);
   logInfo("Setting the front");
   const txSetFront = simplifiedLogic.setFront(recTokenFront.contractAddress, {
-    from: controller,
+    from: owner,
     gas: 5e5
   });
   await txReceipt(eth, txSetFront);
