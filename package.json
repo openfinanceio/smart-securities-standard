@@ -9,7 +9,7 @@
     "url": "https://github.com/OpenFinanceIO/smart-securities-standard"
   },
   "scripts": {
-    "build": "scripts/build",
+    "build": "tsc",
     "compile": "scripts/compile",
     "make-docs": "typedoc --mode modules --out ./docs",
     "test": "tsc -p tsconfig.test.json && mocha dist/test/*.spec.js src/"
