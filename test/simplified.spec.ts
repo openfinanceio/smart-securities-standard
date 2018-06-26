@@ -65,7 +65,7 @@ const test = async (n: number) => {
     assert(success(recTransfer), "transfer should succeed");
     const nextTxfrIndex = await handleTransfers(
       middleware,
-      owner,
+      controller,
       new BigNumber(0),
       web3.eth,
       decision,

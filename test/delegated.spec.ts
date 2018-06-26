@@ -51,11 +51,15 @@ describe("DelegatedTokenLogic", () => {
       const migrateReceipt = await txReceipt(web3.eth, txMigrate);
       assertSuccess(migrateReceipt);
       // Front
-      const frTx = web3.eth.contract(ABI.TokenFront.abi).new(tkAddr, {
-        from: controller,
-        gas: 1e6,
-        data: ABI.TokenFront.bytecode
-      });
+      const frTx = web3.eth.contract(ABI.TokenFront.abi).new(
+        tkAddr, 
+        controller,
+        {
+          from: controller,
+          gas: 1e6,
+          data: ABI.TokenFront.bytecode
+        }
+      );
       const frReceipt = await txReceipt(web3.eth, frTx.transactionHash);
       assertSuccess(frReceipt);
       const frAddr = frReceipt.contractAddress as string;

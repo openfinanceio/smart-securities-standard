@@ -23,6 +23,7 @@ export async function issue(
     const createFront = new Promise((resolve, reject) => {
       console.log("Creating front");
       web3.eth.contract(ABI.TokenFront.abi).new(
+        security.owner,
         {
           data: ABI.TokenFront.bytecode,
           from: controller,
@@ -84,9 +85,9 @@ export async function issue(
                     }
                   );
                   console.log("Migrating front to this coordinator");
-                  front.migrate(instance.address, { from: controller });
+                  front.migrate(instance.address, { from: security.owner });
                   front.transferOwnership(security.issuer, {
-                    from: controller
+                    from: security.owner
                   });
                   console.log("Setting the front for the coordinator");
                   instance.setFront(front.address, { from: controller });
