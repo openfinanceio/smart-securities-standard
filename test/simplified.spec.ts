@@ -29,9 +29,8 @@ const test = async (n: number) => {
       { address: env.roles.investor1, amount: new BigNumber(1e5) },
       { address: env.roles.investor2, amount: new BigNumber(2e4) }
     ],
-    issuer: env.roles.issuer,
     metadata: { name: "TheSecurity" },
-    owner: owner
+    admin: owner
   };
   const { front, middleware, securityId } = await issue(
     security,

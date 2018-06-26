@@ -1,6 +1,0 @@
-/** This is a parametric interface describing how tokens bound by rules should
- * interact with their rule enforcers. 
- */
-interface RuleBound<QueryResult> {
-  function query(address _from, address _to, uint256 _value) public view returns (QueryResult);
-}

@@ -38,9 +38,8 @@ export const environment = (web3: Web3) => {
         },
         investors,
         isFund: false,
-        issuer,
         metadata: { name: "Security1" },
-        owner: securityOwner
+        admin: securityOwner
       };
       return s;
     }
