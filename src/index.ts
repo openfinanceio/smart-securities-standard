@@ -9,5 +9,6 @@ export {
 export { BigNumber } from "bignumber.js";
 
 import { ABI, Artifact } from "./Contracts";
+export { BaseSecurity } from "./Types";
 
 export const TokenFront: Artifact = ABI.TokenFront;
