@@ -21,7 +21,7 @@ export async function issue(
   const { front, middleware } = await initToken(
     securityId,
     capTables,
-    security.owner,
+    security.admin,
     controller,
     eth
   );
@@ -80,7 +80,7 @@ export async function initToken(
   this: void,
   securityId: SecurityId,
   capTables: Address,
-  owner: Address,
+  admin: Address,
   controller: Address,
   eth: Web3.EthApi
 ): Promise<{
@@ -93,7 +93,7 @@ export async function initToken(
     .new(
       securityId,
       capTables, 
-      owner,
+      admin,
       controller,
       {
         data: SimplifiedLogic.bytecode,
@@ -119,7 +119,7 @@ export async function initToken(
     .contract(ABI.TokenFront.abi)
     .new(
       recSimplifiedLogic.contractAddress, 
-      owner,
+      admin,
       {
         data: ABI.TokenFront.bytecode,
         from: controller,
@@ -133,7 +133,7 @@ export async function initToken(
     .at(simplifiedLogicAddress);
   logInfo("Setting the front");
   const txSetFront = simplifiedLogic.setFront(recTokenFront.contractAddress, {
-    from: owner,
+    from: admin,
     gas: 5e5
   });
   await txReceipt(eth, txSetFront);

@@ -27,13 +27,12 @@ export interface RegS extends BaseSecurity {
 }
 
 export interface BaseSecurity {
+  admin: Address;
   investors: { address: Address; amount: BigNumber }[];
-  issuer: Address;
   metadata: {
     name: string;
     [prop: string]: any;
   };
-  owner: Address;
 }
 
 export interface S3Contracts {
