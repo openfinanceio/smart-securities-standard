@@ -2,16 +2,19 @@ import { ABI } from "../Contracts";
 import { Address } from "../Types";
 
 import { txReceipt } from "@cfxmarkets/web3-utils";
+import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
 
 export async function init(
   controller: Address,
+  gasPrice: BigNumber,
   eth: Web3.EthApi
 ): Promise<Address> {
   const { transactionHash } = eth.contract(ABI.CapTables.abi).new({
     from: controller,
     data: ABI.CapTables.bytecode,
-    gas: 1e6
+    gas: 1e6,
+    gasPrice
   });
   const { contractAddress } = await txReceipt(eth, transactionHash);
   return contractAddress as Address;
