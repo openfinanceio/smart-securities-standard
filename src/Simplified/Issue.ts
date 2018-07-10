@@ -6,23 +6,31 @@ import { txReceipt } from "@cfxmarkets/web3-utils";
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
 
+/**
+ * Issue a security on S3
+ * @param controller the address to use to deploy the contracts.  Note that
+ *                   this address will wind up as the resolver as well. 
+ * @param gasPrice in Wei
+ */
 export async function issue(
   this: void,
   security: BaseSecurity,
   capTables: Address,
   controller: Address,
+  gasPrice: BigNumber, 
   eth: Web3.EthApi
 ): Promise<{
   securityId: SecurityId;
   middleware: Address;
   front: Address;
 }> {
-  const securityId = await initCapTable(security, capTables, controller, eth);
+  const securityId = await initCapTable(security, capTables, controller, gasPrice, eth);
   const { front, middleware } = await initToken(
     securityId,
     capTables,
     security.admin,
     controller,
+    gasPrice,
     eth
   );
   return {
@@ -39,6 +47,7 @@ export async function initCapTable(
   security: BaseSecurity,
   capTables: Address,
   controller: Address,
+  gasPrice: BigNumber, 
   eth: Web3.EthApi
 ): Promise<SecurityId> {
   const CapTables = eth.contract(ABI.CapTables.abi).at(capTables);
@@ -46,7 +55,8 @@ export async function initCapTable(
   logInfo("Deploying the cap table");
   const txInit = CapTables.initialize(supply, controller, {
     from: controller,
-    gas: 5e5
+    gas: 5e5,
+    gasPrice
   });
   const recInit = await txReceipt(eth, txInit);
   const index = new BigNumber(recInit.logs[0].data.slice(2), 16);
@@ -64,7 +74,8 @@ export async function initCapTable(
           investor.amount,
           {
             from: controller,
-            gas: 5e5
+            gas: 5e5,
+            gasPrice
           }
         );
         await txReceipt(eth, tx);
@@ -82,6 +93,7 @@ export async function initToken(
   capTables: Address,
   admin: Address,
   controller: Address,
+  gasPrice: BigNumber,
   eth: Web3.EthApi
 ): Promise<{
   middleware: Address;
@@ -98,7 +110,8 @@ export async function initToken(
       {
         data: SimplifiedLogic.bytecode,
         from: controller,
-        gas: 1.5e6
+        gas: 1.5e6,
+        gasPrice
       }
     );
   const recSimplifiedLogic = await txReceipt(
@@ -111,7 +124,8 @@ export async function initToken(
   logInfo("Migrating the cap table to SimplifiedLogic");
   const txMigrate = CapTables.migrate(securityId, simplifiedLogicAddress, {
     from: controller,
-    gas: 5e5
+    gas: 5e5,
+    gasPrice
   });
   await txReceipt(eth, txMigrate);
   logInfo("Deploying the token front");
@@ -123,7 +137,8 @@ export async function initToken(
       {
         data: ABI.TokenFront.bytecode,
         from: controller,
-        gas: 1e6
+        gas: 1e6,
+        gasPrice
       }
     );
   const recTokenFront = await txReceipt(eth, txFront.transactionHash);
@@ -134,7 +149,8 @@ export async function initToken(
   logInfo("Setting the front");
   const txSetFront = simplifiedLogic.setFront(recTokenFront.contractAddress, {
     from: admin,
-    gas: 5e5
+    gas: 5e5,
+    gasPrice
   });
   await txReceipt(eth, txSetFront);
   return {

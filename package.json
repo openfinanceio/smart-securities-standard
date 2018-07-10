@@ -28,6 +28,6 @@
     "@cfxmarkets/web3-utils": "*",
     "bignumber.js": "^5.0.0",
     "lodash": "^4.17.5",
-    "web3": "^0.20.4"
+    "web3": "^0.20.6"
   }
 }
