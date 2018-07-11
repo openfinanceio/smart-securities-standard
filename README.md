@@ -81,7 +81,7 @@ Manual issuance proceeds in several stages.
 - **Stage II.**  Make calls to `CapTables.transfer` to configure the initial
   distribution of your security.
 - **Stage III.** Deploy `SimplifiedLogic` to address `logicAddress`, then
-  deploy `TokenFront` with construction parameter `logiAddress`.  Call
+  deploy `TokenFront` with construction parameter `logicAddress`.  Call
   `setFront` on `SimplifiedLogic` with the address of the `TokenFront` to
   authorize it to call in. 
 - **Stage IV.** Make some provision to detect and resolve transfer requests.
@@ -110,7 +110,7 @@ Reg S
 This regulation covers certain securities that can be traded by foreign investors.
 
 - Both the seller and buyer must pass AML/KYC checks.
-- Both the seller and buyer must reside in a non-US jursidiction.
+- Both the seller and buyer must reside in a non-US jurisdiction.
 
 Setting up S3 for development
 ==
