@@ -20,7 +20,7 @@ const controller = env.roles.controller;
 const owner = env.roles.securityOwner;
 
 const test = async (n: number) => {
-  const capTables = await init(controller, web3.eth);
+  const capTables = await init(controller, new BigNumber(0), web3.eth);
   if (n < 1) {
     return;
   }
@@ -36,6 +36,7 @@ const test = async (n: number) => {
     security,
     capTables,
     env.roles.controller,
+    new BigNumber(0),
     web3.eth
   );
   if (n == 2) {
