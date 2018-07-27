@@ -25,6 +25,8 @@ Then, take a look at the setup instructions below.
 Architecture
 --
 
+![Architecture diagram](arch.png)
+
 The _simplified_ S3 architecture provides a permissioned token with no rule
 checking on chain.  There are three classes of contracts.
 
