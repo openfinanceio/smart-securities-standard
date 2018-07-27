@@ -1,8 +1,8 @@
 import { SimplifiedLogic } from "./Contracts";
 import { ABI } from "../Contracts";
 import { Address, BaseSecurity, SecurityId } from "../Types";
+import { txReceipt } from "../Web3";
 
-import { txReceipt } from "@cfxmarkets/web3-utils";
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
 
