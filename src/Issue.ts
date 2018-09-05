@@ -1,7 +1,6 @@
-import { SimplifiedLogic } from "./Contracts";
-import { ABI } from "../Contracts";
-import { Address, BaseSecurity, SecurityId } from "../Types";
-import { txReceipt } from "../Web3";
+import { CapTables as CapTablesArtifact, SimplifiedLogic, TokenFront} from "./Contracts";
+import { Address, BaseSecurity, SecurityId } from "./Types";
+import { txReceipt } from "./Web3";
 
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
@@ -50,7 +49,7 @@ export async function initCapTable(
   gasPrice: BigNumber, 
   eth: Web3.EthApi
 ): Promise<SecurityId> {
-  const CapTables = eth.contract(ABI.CapTables.abi).at(capTables);
+  const CapTables = eth.contract(CapTablesArtifact.abi).at(capTables);
   const supply = totalSupply(security);
   logInfo("Deploying the cap table");
   const txInit = CapTables.initialize(supply, controller, {
@@ -120,7 +119,7 @@ export async function initToken(
   );
   const simplifiedLogicAddress = recSimplifiedLogic.contractAddress as string;
   logDebug(`SimplifiedLogic address: ${simplifiedLogicAddress}`);
-  const CapTables = eth.contract(ABI.CapTables.abi).at(capTables);
+  const CapTables = eth.contract(CapTablesArtifact.abi).at(capTables);
   logInfo("Migrating the cap table to SimplifiedLogic");
   const txMigrate = CapTables.migrate(securityId, simplifiedLogicAddress, {
     from: controller,
@@ -130,12 +129,12 @@ export async function initToken(
   await txReceipt(eth, txMigrate);
   logInfo("Deploying the token front");
   const txFront = eth
-    .contract(ABI.TokenFront.abi)
+    .contract(TokenFront.abi)
     .new(
       recSimplifiedLogic.contractAddress, 
       admin,
       {
-        data: ABI.TokenFront.bytecode,
+        data: TokenFront.bytecode,
         from: controller,
         gas: 1e6,
         gasPrice

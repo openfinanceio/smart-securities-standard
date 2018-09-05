@@ -1,6 +1,6 @@
-import { ABI } from "../Contracts";
-import { Address } from "../Types";
-import { txReceipt } from "../Web3";
+import { CapTables } from "./Contracts";
+import { Address } from "./Types";
+import { txReceipt } from "./Web3";
 
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
@@ -16,9 +16,9 @@ export async function init(
   gasPrice: BigNumber,
   eth: Web3.EthApi
 ): Promise<Address> {
-  const { transactionHash } = eth.contract(ABI.CapTables.abi).new({
+  const { transactionHash } = eth.contract(CapTables.abi).new({
     from: controller,
-    data: ABI.CapTables.bytecode,
+    data: CapTables.bytecode,
     gas: 1e6,
     gasPrice
   });

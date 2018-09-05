@@ -1,8 +1,8 @@
 import { SimplifiedLogic } from "./Contracts";
-import { Address } from "../Types";
+import { Address } from "./Types";
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
-import { success, txReceipt } from "../Web3";
+import { success, txReceipt } from "./Web3";
 
 export interface Transfer {
   src: Address;

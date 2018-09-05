@@ -2,13 +2,12 @@ import * as assert from "assert";
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
 
-import { success, txReceipt } from "@cfxmarkets/web3-utils";
+import { success, txReceipt } from "../src/Web3";
 
-import { ABI } from "../src/Contracts";
-import { SimplifiedLogic } from "../src/Simplified/Contracts";
-import { init } from "../src/Simplified/Init";
-import { issue } from "../src/Simplified/Issue";
-import { handleTransfers, TransferRequest } from "../src/Simplified/Monitor";
+import { SimplifiedLogic, TokenFront } from "../src/Contracts";
+import { init } from "../src/Init";
+import { issue } from "../src/Issue";
+import { handleTransfers, TransferRequest } from "../src/Monitor";
 
 import { environment } from "./Support";
 
@@ -52,7 +51,7 @@ const test = async (n: number) => {
       finalized = true;
     };
     console.log("Attempting the transfer");
-    const tokenFront = web3.eth.contract(ABI.TokenFront.abi).at(front);
+    const tokenFront = web3.eth.contract(TokenFront.abi).at(front);
     const txTransfer = tokenFront.transfer(
       env.roles.investor3,
       new BigNumber(1e2),
@@ -94,7 +93,7 @@ const test = async (n: number) => {
         "error code"
       );
     };
-    const tokenFront = web3.eth.contract(ABI.TokenFront.abi).at(front);
+    const tokenFront = web3.eth.contract(TokenFront.abi).at(front);
     console.log("Attempting the transfer");
     const txTransfer = tokenFront.transfer(
       env.roles.investor3,
@@ -140,7 +139,7 @@ const test = async (n: number) => {
       assert.equal(errorCode.toNumber(), targetCode, "error code");
     };
     console.log("Setting up transfer handler");
-    const tokenFront = web3.eth.contract(ABI.TokenFront.abi).at(front);
+    const tokenFront = web3.eth.contract(TokenFront.abi).at(front);
     console.log("First transfer");
     const txTransfer = tokenFront.transfer(
       env.roles.investor3,

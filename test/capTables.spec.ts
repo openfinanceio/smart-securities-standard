@@ -1,9 +1,9 @@
-import { ABI } from "../src/Contracts";
+import { CapTables } from "../src/Contracts";
+import { txReceipt } from "../src/Web3";
 import { assertSuccess, environment } from "./Support";
 
 import * as assert from "assert";
 import { BigNumber } from "bignumber.js";
-import { txReceipt } from "@cfxmarkets/web3-utils";
 import * as Web3 from "web3";
 
 const web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
@@ -13,14 +13,14 @@ const controller = env.roles.controller;
 describe("CapTables", () => {
   describe("initialize", () => {
     it("should initialize a security", async () => {
-      const { transactionHash } = web3.eth.contract(ABI.CapTables.abi).new({
-        data: ABI.CapTables.bytecode,
+      const { transactionHash } = web3.eth.contract(CapTables.abi).new({
+        data: CapTables.bytecode,
         from: controller,
         gas: 5e5
       });
       const { contractAddress } = await txReceipt(web3.eth, transactionHash);
       const CT = web3.eth
-        .contract(ABI.CapTables.abi)
+        .contract(CapTables.abi)
         .at(contractAddress as string);
       const amount1 = new BigNumber(1e5);
       const tx1 = CT.initialize(amount1, env.roles.issuer, {
@@ -45,14 +45,14 @@ describe("CapTables", () => {
   });
   describe("migrate", () => {
     it("should migrate a security", async () => {
-      const { transactionHash } = web3.eth.contract(ABI.CapTables.abi).new({
-        data: ABI.CapTables.bytecode,
+      const { transactionHash } = web3.eth.contract(CapTables.abi).new({
+        data: CapTables.bytecode,
         from: controller,
         gas: 5e5
       });
       const { contractAddress } = await txReceipt(web3.eth, transactionHash);
       const CT = web3.eth
-        .contract(ABI.CapTables.abi)
+        .contract(CapTables.abi)
         .at(contractAddress as string);
       const amount1 = new BigNumber(1e5);
       const tx1 = CT.initialize(amount1, env.roles.issuer, {
@@ -77,13 +77,13 @@ describe("CapTables", () => {
     let CT: Web3.ContractInstance;
     let securityId: BigNumber;
     before(async () => {
-      const { transactionHash } = web3.eth.contract(ABI.CapTables.abi).new({
-        data: ABI.CapTables.bytecode,
+      const { transactionHash } = web3.eth.contract(CapTables.abi).new({
+        data: CapTables.bytecode,
         from: controller,
         gas: 1e6
       });
       const { contractAddress } = await txReceipt(web3.eth, transactionHash);
-      CT = web3.eth.contract(ABI.CapTables.abi).at(contractAddress as string);
+      CT = web3.eth.contract(CapTables.abi).at(contractAddress as string);
       const tx0 = CT.initialize(1e5, env.roles.issuer, {
         from: controller,
         gas: 5e5
