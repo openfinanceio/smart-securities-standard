@@ -23,6 +23,7 @@
   "include": [
     "./global.d.ts",
     "./build/*.json",
-    "./src/**/*.ts"
+    "./src/**/*.ts",
+    "./run/*.ts"
   ]
 }

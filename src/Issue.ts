@@ -1,5 +1,9 @@
-import { CapTables as CapTablesArtifact, SimplifiedLogic, TokenFront} from "./Contracts";
-import { Address, BaseSecurity, SecurityId } from "./Types";
+import {
+  CapTables as CapTablesArtifact,
+  SimplifiedLogic,
+  TokenFront
+} from "./Contracts";
+import { Address, BaseSecurity, SecurityId, Transcript } from "./Types";
 import { txReceipt } from "./Web3";
 
 import { BigNumber } from "bignumber.js";
@@ -8,7 +12,7 @@ import * as Web3 from "web3";
 /**
  * Issue a security on S3
  * @param controller the address to use to deploy the contracts.  Note that
- *                   this address will wind up as the resolver as well. 
+ *                   this address will wind up as the resolver as well.
  * @param gasPrice in Wei
  */
 export async function issue(
@@ -16,15 +20,26 @@ export async function issue(
   security: BaseSecurity,
   capTables: Address,
   controller: Address,
-  gasPrice: BigNumber, 
+  gasPrice: string,
   eth: Web3.EthApi
-): Promise<{
-  securityId: SecurityId;
-  middleware: Address;
-  front: Address;
-}> {
-  const securityId = await initCapTable(security, capTables, controller, gasPrice, eth);
-  const { front, middleware } = await initToken(
+): Promise<
+  [
+    {
+      securityId: SecurityId;
+      middleware: Address;
+      front: Address;
+    },
+    Transcript
+  ]
+> {
+  const [securityId, transcript0] = await initCapTable(
+    security,
+    capTables,
+    controller,
+    gasPrice,
+    eth
+  );
+  const [{ front, middleware }, transcript1] = await initToken(
     securityId,
     capTables,
     security.admin,
@@ -32,11 +47,14 @@ export async function issue(
     gasPrice,
     eth
   );
-  return {
-    front,
-    middleware,
-    securityId
-  };
+  return [
+    {
+      front,
+      middleware,
+      securityId
+    },
+    transcript0.concat(transcript1)
+  ];
 }
 
 /*  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  */
@@ -46,9 +64,10 @@ export async function initCapTable(
   security: BaseSecurity,
   capTables: Address,
   controller: Address,
-  gasPrice: BigNumber, 
+  gasPrice: string,
   eth: Web3.EthApi
-): Promise<SecurityId> {
+): Promise<[SecurityId, Transcript]> {
+  const transcript: Transcript = [];
   const CapTables = eth.contract(CapTablesArtifact.abi).at(capTables);
   const supply = totalSupply(security);
   logInfo("Deploying the cap table");
@@ -59,13 +78,25 @@ export async function initCapTable(
   });
   const recInit = await txReceipt(eth, txInit);
   const index = new BigNumber(recInit.logs[0].data.slice(2), 16);
+  transcript.push({
+    type: "send",
+    description: `initialize a new security in ${capTables}`,
+    hash: txInit,
+    gasUsed: recInit.gasUsed,
+    data: {
+      supply,
+      controller,
+      index
+    }
+  });
   logInfo("Initial distribution");
   await Promise.all(
     security.investors.map(
       async (investor: { address: Address; amount: BigNumber }) => {
-        logInfo(
-          `Distributing ${investor.amount.toString()} to ${investor.address}`
-        );
+        const description = `Distributing ${investor.amount.toString()} to ${
+          investor.address
+        }`;
+        logInfo(description);
         const tx = CapTables.transfer(
           index,
           controller,
@@ -77,11 +108,23 @@ export async function initCapTable(
             gasPrice
           }
         );
-        await txReceipt(eth, tx);
+        const rec = await txReceipt(eth, tx);
+        transcript.push({
+          type: "send",
+          description,
+          hash: tx,
+          gasUsed: rec.gasUsed,
+          data: {
+            index,
+            src: controller,
+            dest: investor.address,
+            amount: investor.amount
+          }
+        });
       }
     )
   );
-  return index;
+  return [index, transcript];
 }
 
 /*  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  */
@@ -92,70 +135,115 @@ export async function initToken(
   capTables: Address,
   admin: Address,
   controller: Address,
-  gasPrice: BigNumber,
+  gasPrice: string,
   eth: Web3.EthApi
-): Promise<{
-  middleware: Address;
-  front: Address;
-}> {
+): Promise<
+  [
+    {
+      middleware: Address;
+      front: Address;
+    },
+    Transcript
+  ]
+> {
   logInfo("Deploying SimplifiedLogic");
+  const transcript: Transcript = [];
   const txSimplifiedLogic = eth
     .contract(SimplifiedLogic.abi)
-    .new(
-      securityId,
-      capTables, 
-      admin,
-      controller,
-      {
-        data: SimplifiedLogic.bytecode,
-        from: controller,
-        gas: 1.5e6,
-        gasPrice
-      }
-    );
+    .new(securityId, capTables, admin, controller, {
+      data: SimplifiedLogic.bytecode,
+      from: controller,
+      gas: 1.5e6,
+      gasPrice
+    });
   const recSimplifiedLogic = await txReceipt(
     eth,
     txSimplifiedLogic.transactionHash
   );
   const simplifiedLogicAddress = recSimplifiedLogic.contractAddress as string;
+  transcript.push({
+    type: "send",
+    description: "deployed SimplifiedLogic",
+    hash: txSimplifiedLogic.transactionHash,
+    gasUsed: recSimplifiedLogic.gasUsed,
+    data: {
+      securityId,
+      capTables,
+      admin,
+      controller,
+      simplifiedLogicAddress
+    }
+  });
   logDebug(`SimplifiedLogic address: ${simplifiedLogicAddress}`);
   const CapTables = eth.contract(CapTablesArtifact.abi).at(capTables);
-  logInfo("Migrating the cap table to SimplifiedLogic");
+  const migrationDescription = "Migrating the cap table to SimplifiedLogic";
+  logInfo(migrationDescription);
   const txMigrate = CapTables.migrate(securityId, simplifiedLogicAddress, {
     from: controller,
     gas: 5e5,
     gasPrice
   });
-  await txReceipt(eth, txMigrate);
-  logInfo("Deploying the token front");
+  const migrationReceipt = await txReceipt(eth, txMigrate);
+  transcript.push({
+    type: "send",
+    description: migrationDescription,
+    hash: txMigrate,
+    gasUsed: migrationReceipt.gasUsed,
+    data: {
+      securityId,
+      simplifiedLogicAddress
+    }
+  });
+  const tokenFrontDescription = "Deploying the token front";
+  logInfo(tokenFrontDescription);
   const txFront = eth
     .contract(TokenFront.abi)
-    .new(
-      recSimplifiedLogic.contractAddress, 
-      admin,
-      {
-        data: TokenFront.bytecode,
-        from: controller,
-        gas: 1e6,
-        gasPrice
-      }
-    );
+    .new(simplifiedLogicAddress, admin, {
+      data: TokenFront.bytecode,
+      from: controller,
+      gas: 1e6,
+      gasPrice
+    });
   const recTokenFront = await txReceipt(eth, txFront.transactionHash);
   const front = recTokenFront.contractAddress as string;
+  transcript.push({
+    type: "send",
+    description: tokenFrontDescription,
+    hash: txFront.transactionHash,
+    gasUsed: recTokenFront.gasUsed,
+    data: {
+      front,
+      simplifiedLogicAddress,
+      admin
+    }
+  });
   const simplifiedLogic = eth
     .contract(SimplifiedLogic.abi)
     .at(simplifiedLogicAddress);
-  logInfo("Setting the front");
-  const txSetFront = simplifiedLogic.setFront(recTokenFront.contractAddress, {
+  const setFrontDescription = "Setting the front";
+  logInfo(setFrontDescription);
+  const txSetFront = simplifiedLogic.setFront(front, {
     from: admin,
     gas: 5e5,
     gasPrice
   });
-  await txReceipt(eth, txSetFront);
-  return {
-    front,
-    middleware: simplifiedLogicAddress
-  };
+  const setFrontReceipt = await txReceipt(eth, txSetFront);
+  transcript.push({
+    type: "send",
+    description: setFrontDescription,
+    hash: txSetFront,
+    gasUsed: setFrontReceipt.gasUsed,
+    data: {
+      front
+    }
+  });
+  return [
+    {
+      front,
+      middleware: simplifiedLogicAddress
+    },
+    transcript
+  ];
 }
 
 /*  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  */
