@@ -1,5 +1,5 @@
 // Variation on `StandardToken` by Open Zeppelin
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.24;
 
 import { DelegatedERC20 } from "./interfaces/DelegatedERC20.sol";
 import { ICapTables } from "./interfaces/ICapTables.sol";

@@ -1,5 +1,6 @@
 ---
 version: 0.2.0
+solidity: 0.4.24
 status: experimental
 ---
 

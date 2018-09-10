@@ -1,9 +1,8 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.24;
 
 import { DelegatedTokenLogic } from "./DelegatedTokenLogic.sol";
 import { IndexConsumer } from "./IndexConsumer.sol";
 import { ICapTables } from "./interfaces/ICapTables.sol";
-import { Ownable } from "./zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 /**
  * One method for implementing a permissioned token is to appoint some
@@ -11,30 +10,30 @@ import { Ownable } from "./zeppelin-solidity/contracts/ownership/Ownable.sol";
  * contract implements this functionality.  
  */
 contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
-  struct TokenTransfer {
-    address src;
-    address dest;
-    uint256 amount;
-    address spender;
-  }
   enum TransferStatus {
     Unused,
     Active,
     Resolved
   }
+  struct TokenTransfer {
+    address src;
+    address dest;
+    uint256 amount;
+    address spender;
+    TransferStatus status;
+  }
   mapping(uint256 => TokenTransfer) public pending;
-  mapping(uint256 => TransferStatus) public resolutionStatus;
   address public resolver;
   bool public contractActive = true;
   event TransferRequest(
-    uint256 index,
+    uint256 indexed index,
     address src,
     address dest,
     uint256 amount,
     address spender
   );
   event TransferResult(
-    uint256 index,
+    uint256 indexed index,
     uint16 code
   );
   modifier onlyActive () {
@@ -59,8 +58,7 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
   ) public onlyFront onlyActive returns (bool) 
   {
     uint256 txfrIndex = nextIndex();
-    pending[txfrIndex] = TokenTransfer(_sender, _dest, _amount, _sender);
-    resolutionStatus[txfrIndex] = TransferStatus.Active;
+    pending[txfrIndex] = TokenTransfer(_sender, _dest, _amount, _sender, TransferStatus.Active);
     emit TransferRequest(
       txfrIndex,
       _sender,
@@ -79,8 +77,7 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
   {
     require(_amount <= allowed[_src][_sender]);
     uint txfrIndex = nextIndex();
-    pending[txfrIndex] = TokenTransfer(_src, _dest, _amount, _sender);
-    resolutionStatus[txfrIndex] = TransferStatus.Active;
+    pending[txfrIndex] = TokenTransfer(_src, _dest, _amount, _sender, TransferStatus.Active);
     emit TransferRequest(
       txfrIndex,
       _src,
@@ -96,7 +93,7 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
   ) public returns (bool result)
   {
     require(msg.sender == resolver);
-    require(resolutionStatus[_txfrIndex] == TransferStatus.Active);
+    require(pending[_txfrIndex].status == TransferStatus.Active);
     TokenTransfer storage tfr = pending[_txfrIndex];
     result = false;
     if (_code == 0) {
@@ -110,10 +107,8 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
         allowed[tfr.src][tfr.spender] = allowed[tfr.src][tfr.spender].sub(tfr.amount);
       }
     } 
-    delete pending[_txfrIndex];
-    resolutionStatus[_txfrIndex] = TransferStatus.Resolved;
+    pending[_txfrIndex].status = TransferStatus.Resolved;
     emit TransferResult(_txfrIndex, _code);
-    return result;
   }
   function migrate(
     address newLogic

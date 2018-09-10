@@ -1,4 +1,4 @@
-pragma solidity ^0.4.10;
+pragma solidity ^0.4.24;
 
 interface DelegatedERC20 {
   function allowance(address _owner, address _spender) external view returns (uint256); 

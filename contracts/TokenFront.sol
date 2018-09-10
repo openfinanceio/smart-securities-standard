@@ -1,4 +1,4 @@
-pragma solidity ^0.4.10;
+pragma solidity ^0.4.24;
 
 import { DelegatedERC20 } from "./interfaces/DelegatedERC20.sol";
 
