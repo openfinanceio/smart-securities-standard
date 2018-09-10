@@ -11,54 +11,56 @@ import { Ownable } from "./zeppelin-solidity/contracts/ownership/Ownable.sol";
  * emit ERC20 events.  Rather this contract should emit them. 
  */
 contract TokenFront is ERC20, Ownable {
-  DelegatedERC20 public tokenLogic;
-  constructor(
-    DelegatedERC20 _tokenLogic,
-    address _owner
-  ) 
-    public
-  {
-    owner = _owner;
-    tokenLogic = _tokenLogic; 
-  }
-  function migrate(DelegatedERC20 newTokenLogic) public onlyOwner
-  {
-    tokenLogic = newTokenLogic;
-  }
-  function allowance(address owner, address spender) public view returns (uint256)
-  {
-    return tokenLogic.allowance(owner, spender);
-  }
-  function transferFrom(address from, address to, uint256 value) public returns (bool)
-  {
-    if (tokenLogic.transferFrom(from, to, value, msg.sender)) {
-      emit Transfer(from, to, value);
-      return true;
-    } 
-    return false;
-  }
-  function approve(address spender, uint256 value) public returns (bool)
-  {
-    if (tokenLogic.approve(spender, value, msg.sender)) {
-      emit Approval(msg.sender, spender, value);
-      return true;
+
+    DelegatedERC20 public tokenLogic;
+    
+    constructor(DelegatedERC20 _tokenLogic, address _owner) public {
+        owner = _owner;
+        tokenLogic = _tokenLogic; 
     }
-    return false;
-  }
-  function totalSupply() public view returns (uint256)
-  {
-    return tokenLogic.totalSupply();
-  }
-  function balanceOf(address who) public view returns (uint256)
-  {
-    return tokenLogic.balanceOf(who);
-  }
-  function transfer(address to, uint256 value) public returns (bool)
-  {
-    if (tokenLogic.transfer(to, value, msg.sender)) {
-      emit Transfer(msg.sender, to, value);
-      return true;
-    } 
-    return false;
-  }
+
+    function migrate(DelegatedERC20 newTokenLogic) public onlyOwner {
+        tokenLogic = newTokenLogic;
+    }
+
+    function allowance(address owner, address spender) 
+        public 
+        view 
+        returns (uint256)
+    {
+        return tokenLogic.allowance(owner, spender);
+    }
+
+    function transferFrom(address from, address to, uint256 value) public returns (bool) {
+        if (tokenLogic.transferFrom(from, to, value, msg.sender)) {
+            emit Transfer(from, to, value);
+            return true;
+        } 
+        return false;
+    }
+
+    function approve(address spender, uint256 value) public returns (bool) {
+        if (tokenLogic.approve(spender, value, msg.sender)) {
+            emit Approval(msg.sender, spender, value);
+            return true;
+        }
+        return false;
+    }
+
+    function totalSupply() public view returns (uint256) {
+        return tokenLogic.totalSupply();
+    }
+    
+    function balanceOf(address who) public view returns (uint256) {
+        return tokenLogic.balanceOf(who);
+    }
+
+    function transfer(address to, uint256 value) public returns (bool) {
+        if (tokenLogic.transfer(to, value, msg.sender)) {
+            emit Transfer(msg.sender, to, value);
+            return true;
+        } 
+        return false;
+    }
+
 }

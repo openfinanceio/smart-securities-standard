@@ -13,48 +13,53 @@ import "./zeppelin-solidity/contracts/math/SafeMath.sol";
  * transfers.
  */
 contract CapTables is IndexConsumer {
-  using SafeMath for uint256;
+    using SafeMath for uint256;
 
-  /** Address of security */
-  mapping(uint256 => address) public addresses;
+    /** Address of security */
+    mapping(uint256 => address) public addresses;
 
-  /** `capTable(security, user) == userBalance` */
-  mapping(uint256 => mapping(address => uint256)) public capTable;
+    /** `capTable(security, user) == userBalance` */
+    mapping(uint256 => mapping(address => uint256)) public capTable;
 
-  /** Total token supplies */
-  mapping(uint256 => uint256) public totalSupply;
+    /** Total token supplies */
+    mapping(uint256 => uint256) public totalSupply;
 
-  /* EVENTS */
+    /* EVENTS */
 
-  event NewSecurity(uint256 security);
-  event SecurityMigration(uint256 security, address newAddress);
+    event NewSecurity(uint256 security);
+    event SecurityMigration(uint256 security, address newAddress);
 
-  /** @dev retrieve the balance at a given address */
-  function balanceOf(uint256 security, address user) public view returns (uint256) {
-    return capTable[security][user];
-  }
+    modifier onlySecurity(uint256 security) {  
+        require(msg.sender == addresses[security], "this method MUST be called by the security's control account");
+    }
 
-  /** @dev Add a security to the contract. */
-  function initialize(uint256 supply, address manager) public returns (uint256) {
-    uint256 index = nextIndex();
-    addresses[index] = manager;
-    capTable[index][manager] = supply;
-    totalSupply[index] = supply;
-    emit NewSecurity(index);
-    return index;
-  }
+    /** @dev retrieve the balance at a given address */
+    function balanceOf(uint256 security, address user) public view returns (uint256) {
+        return capTable[security][user];
+    }
 
-  /** @dev Migrate a security to a new address, if its transfer restriction rules change. */
-  function migrate(uint256 security, address newAddress) public {
-    require(msg.sender == addresses[security]);
-    addresses[security] = newAddress;
-    emit SecurityMigration(security, newAddress);
-  }
+    /** @dev Add a security to the contract. */
+    function initialize(uint256 supply, address manager) public returns (uint256) {
+        uint256 index = nextIndex();
+        addresses[index] = manager;
+        capTable[index][manager] = supply;
+        totalSupply[index] = supply;
+        emit NewSecurity(index);
+        return index;
+    }
 
-  /** @dev Transfer an amount of security. */
-  function transfer(uint256 security, address src, address dest, uint256 amount) public {
-    require(msg.sender == addresses[security]);
-    capTable[security][src] = capTable[security][src].sub(amount);
-    capTable[security][dest] = capTable[security][dest].add(amount);
-  }
+    /** @dev Migrate a security to a new address, if its transfer restriction rules change. */
+    function migrate(uint256 security, address newAddress) public onlySecurity(security) {
+        addresses[security] = newAddress;
+        emit SecurityMigration(security, newAddress);
+    }
+
+    /** @dev Transfer an amount of security. */
+    function transfer(uint256 security, address src, address dest, uint256 amount) 
+        public 
+        onlySecurity(security) 
+    {
+        capTable[security][src] = capTable[security][src].sub(amount);
+        capTable[security][dest] = capTable[security][dest].add(amount);
+    }
 }
