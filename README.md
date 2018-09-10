@@ -1,5 +1,5 @@
 ---
-version: 0.2.0
+version: 0.2.2
 solidity: 0.4.24
 status: experimental
 ---
@@ -95,25 +95,20 @@ Manual issuance proceeds in several stages.
 
 Implemented Regulations
 ==
-RegD 506 (c)
---
 
-A security which meets this exemption may be traded under the following 
-conditions.
+An S3 token can be managed using the `handleTransfers<A>` function.  To use
+this function, you must implement:
 
-- An initial shareholder may transfer shares _after_ a 12 month holding period.
-- Both the buyer and seller in a share transfer must meet AML-KYC requirements.
-- The buyer must be accredited.
-- If the security was issued by a fund, the number of shareholders must not
-	exceed 99; otherwise the number of shareholders must not exceed 2000.
+```typescript
+// A decider with the restriction logic.  It should return a pair [code, x]
+// where code is the error code (success = 0) and x is a payload that is consumed
+// by the finalizer.
+declare decision: (tr: Transfer) => Promise<[number, A]>
 
-Reg S
---
-
-This regulation covers certain securities that can be traded by foreign investors.
-
-- Both the seller and buyer must pass AML/KYC checks.
-- Both the seller and buyer must reside in a non-US jurisdiction.
+// A finalizer, which is used e.g. to persist the resolution hash and error
+// code to a database.
+declare finalization: (txHash: string, extraData: A) => Promise<void>;
+```
 
 Setting up S3 for development
 ==
