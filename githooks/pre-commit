@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -e 
+
+tsfiles=$(git diff --cached --name-only --diff-filter=ACM "*.ts" | tr '\n' ' ')
+[ -z "$tsfiles" ] && exit 0
+
+# Prettify all staged .js files
+echo "$tsfiles" | xargs prettier --write
+
+# Add back the modified/prettified files to staging
+echo "$tsfiles" | xargs git add
+
+exit 0
