@@ -30,7 +30,11 @@ contract CapTables is IndexConsumer {
     event SecurityMigration(uint256 security, address newAddress);
 
     modifier onlySecurity(uint256 security) {  
-        require(msg.sender == addresses[security], "this method MUST be called by the security's control account");
+        require(
+            msg.sender == addresses[security], 
+            "this method MUST be called by the security's control account"
+        );
+        _;
     }
 
     /** @dev retrieve the balance at a given address */
