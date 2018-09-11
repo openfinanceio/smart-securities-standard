@@ -1,8 +1,8 @@
 import { SimplifiedLogic } from "./Contracts";
-import { Address } from "../Types";
+import { Address } from "./Types";
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
-import { success, txReceipt } from "@cfxmarkets/web3-utils";
+import { success, txReceipt } from "./Web3";
 
 export interface Transfer {
   src: Address;
@@ -19,6 +19,11 @@ export enum TransferStatus {
   Resolved
 }
 
+/**
+ * This function processes the longest consecutive sequence of active
+ * TransferRequests by invoking `decision` on each one, recording the
+ * result to the contract at `logicAddress`, then invoking `finalization`.
+ */
 export async function handleTransfers<A>(
   logicAddress: Address,
   controller: Address,
@@ -30,9 +35,9 @@ export async function handleTransfers<A>(
   const simplifiedLogic = eth.contract(SimplifiedLogic.abi).at(logicAddress);
   let workingIndex = new BigNumber(startingIndex);
   while (
-    !simplifiedLogic.resolutionStatus
+    simplifiedLogic.resolutionStatus
       .call(workingIndex)
-      .equals(TransferStatus.Unused)
+      .equals(TransferStatus.Active)
   ) {
     const [src, dest, amount, spender] = simplifiedLogic.pending.call(
       workingIndex
@@ -43,12 +48,12 @@ export async function handleTransfers<A>(
       from: controller,
       gas: 5e5
     });
+    workingIndex = workingIndex.plus(1);
     const recResolve = await txReceipt(eth, txResolve);
     if (!success(recResolve)) {
       throw Error(`Resolution failed for ${txr.index}`);
     }
     await finalization(txResolve, extraData);
-    workingIndex = workingIndex.plus(1);
   }
   return workingIndex;
 }

@@ -1,205 +1,175 @@
-import { ABI } from "./Contracts";
-import { Address, S3Contracts, Security, SecurityId } from "./Types";
+import { CapTables as CapTablesArtifact, SimplifiedLogic, TokenFront} from "./Contracts";
+import { Address, BaseSecurity, SecurityId } from "./Types";
+import { txReceipt } from "./Web3";
 
 import { BigNumber } from "bignumber.js";
-import * as _ from "lodash";
 import * as Web3 from "web3";
 
+/**
+ * Issue a security on S3
+ * @param controller the address to use to deploy the contracts.  Note that
+ *                   this address will wind up as the resolver as well. 
+ * @param gasPrice in Wei
+ */
 export async function issue(
   this: void,
-  security: Security,
-  contracts: S3Contracts,
+  security: BaseSecurity,
+  capTables: Address,
   controller: Address,
-  web3: Web3
-): Promise<{ securityId: SecurityId; coordinator: Address; front: Address }> {
-  // Compute the total supply
-  const supply: BigNumber = security.investors.reduce(
-    (s, x) => s.plus(x.amount),
-    new BigNumber(0)
+  gasPrice: BigNumber, 
+  eth: Web3.EthApi
+): Promise<{
+  securityId: SecurityId;
+  middleware: Address;
+  front: Address;
+}> {
+  const securityId = await initCapTable(security, capTables, controller, gasPrice, eth);
+  const { front, middleware } = await initToken(
+    securityId,
+    capTables,
+    security.admin,
+    controller,
+    gasPrice,
+    eth
   );
-  // Deploy the token logic contracts
-  function deploy(): Promise<[Address, Web3.ContractInstance]> {
-    console.log("Deploying front and coordinator");
-    const createFront = new Promise((resolve, reject) => {
-      console.log("Creating front");
-      web3.eth.contract(ABI.TokenFront.abi).new(
-        security.owner,
-        {
-          data: ABI.TokenFront.bytecode,
-          from: controller,
-          gas: 3e6
-        },
-        (err: Error, instance: Web3.ContractInstance) => {
-          if (!_.isNull(err)) {
-            reject(err);
-          }
-          if (!_.isUndefined(instance.address)) {
-            console.log(`Front deployed to ${instance.address}`);
-            resolve(instance);
-          }
-        }
-      );
-    }) as Promise<Web3.ContractInstance>;
-    const createCoordinator = (front: Web3.ContractInstance) =>
-      new Promise((resolve, reject) => {
-        switch (security.__type) {
-          case "RegD": {
-            if (contracts.regD === null) {
-              throw Error("We need an instance of TheRegD506c!");
-            }
-            console.log("Creating RegD coordinator");
-            web3.eth.contract(ABI.ARegD506cToken.abi).new(
-              supply,
-              security.investors.length,
-              security.isFund,
-              contracts.regD,
-              contracts.capTables,
-              {
-                data: ABI.ARegD506cToken.bytecode,
-                from: controller,
-                gas: 3e6
-              },
-              (err: Error, instance: Web3.ContractInstance) => {
-                if (!_.isNull(err)) {
-                  reject(err);
-                }
-                if (!_.isUndefined(instance.address)) {
-                  console.log(`Deployed to ${instance.address}`);
-                  // Register the checkers
-                  const regDAddr = contracts.regD as string;
-                  const regD = web3.eth
-                    .contract(ABI.TheRegD506c.abi)
-                    .at(regDAddr);
-                  console.log("Registering AML/KYC checker");
-                  regD.registerAmlKycChecker(contracts.kyc, instance.address, {
-                    from: controller,
-                    gas: 1e5
-                  });
-                  console.log("Registering accreditation checker");
-                  regD.registerAccreditationChecker(
-                    contracts.accreditation,
-                    instance.address,
-                    {
-                      from: controller,
-                      gas: 1e5
-                    }
-                  );
-                  console.log("Migrating front to this coordinator");
-                  front.migrate(instance.address, { from: security.owner });
-                  front.transferOwnership(security.issuer, {
-                    from: security.owner
-                  });
-                  console.log("Setting the front for the coordinator");
-                  instance.setFront(front.address, { from: controller });
-                  instance.transferOwnership(security.issuer, {
-                    from: controller
-                  });
-                  console.log("Token contracts configured!");
-                  resolve([front.address, instance]);
-                }
-              }
-            );
-            break;
-          }
-          case "RegS": {
-            if (contracts.regS === null) {
-              throw Error("We need an instance of TheRegS!");
-            }
-            console.log("Creating a new RegS coordinator");
-            web3.eth
-              .contract(ABI.ARegSToken.abi)
-              .new(
-                supply,
-                contracts.regS,
-                contracts.capTables,
-                { data: ABI.ARegSToken.bytecode, from: controller, gas: 4e5 },
-                (err: Error, instance: Web3.ContractInstance) => {
-                  if (!_.isNull(err)) {
-                    reject(err);
-                  }
-                  if (!_.isUndefined(instance.address)) {
-                    console.log(`Deployed to ${instance.address}`);
-                    const regSAddr = contracts.regS as string;
-                    const regS = web3.eth
-                      .contract(ABI.TheRegS.abi)
-                      .at(regSAddr);
-                    console.log("Registering AML/KYC checker");
-                    regS.registerAmlKycChecker(
-                      security.checkers.amlKyc,
-                      instance.address,
-                      {
-                        from: controller,
-                        gas: 1e5
-                      }
-                    );
-                    console.log("Registering residency checker");
-                    regS.registerResidencyChecker(
-                      security.checkers.residency,
-                      instance.address,
-                      {
-                        from: controller,
-                        gas: 1e5
-                      }
-                    );
-                    console.log("Migrating front to this coordinator");
-                    front.migrate(instance.address, { from: controller });
-                    front.transferOwnership(security.issuer, {
-                      from: controller
-                    });
-                    console.log("Setting the front");
-                    instance.setFront(front.address, { from: controller });
-                    instance.transferOwnership(security.issuer, {
-                      from: controller
-                    });
-                    resolve([front.address, instance]);
-                  }
-                }
-              );
-          }
-        }
-      }) as Promise<[Address, Web3.ContractInstance]>;
-    return createFront.then(createCoordinator);
-  }
-  const [frontAddress, T] = await deploy();
-  const tokenAddress = T.address;
-  const sid: BigNumber = T.index.call();
-  // Configure the cap table
-  const capTablesAddr = contracts.capTables as string;
-  const CT = web3.eth.contract(ABI.CapTables.abi).at(capTablesAddr);
-  console.log("Doing distribution");
-  await Promise.all(
-    security.investors.map(inv => {
-      console.log(`${inv.address} gets ${inv.amount.toString()}`);
-      return new Promise((resolve, reject) =>
-        CT.transfer(
-          sid,
-          controller,
-          inv.address,
-          inv.amount,
-          {
-            from: controller
-          },
-          (err: Error, hash: string) => {
-            if (!_.isNull(err)) {
-              reject(err);
-            } else {
-              resolve(hash);
-            }
-          }
-        )
-      );
-    })
-  );
-  // Move control of the cap table to the token
-  console.log("Migrating");
-  const th = CT.migrate(sid, tokenAddress, { from: controller });
-  console.log(th);
-  if (security.__type == "RegD") {
-    T.issue({ from: security.issuer });
-  }
   return {
-    coordinator: tokenAddress,
-    front: frontAddress,
-    securityId: sid
+    front,
+    middleware,
+    securityId
   };
+}
+
+/*  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  */
+
+export async function initCapTable(
+  this: void,
+  security: BaseSecurity,
+  capTables: Address,
+  controller: Address,
+  gasPrice: BigNumber, 
+  eth: Web3.EthApi
+): Promise<SecurityId> {
+  const CapTables = eth.contract(CapTablesArtifact.abi).at(capTables);
+  const supply = totalSupply(security);
+  logInfo("Deploying the cap table");
+  const txInit = CapTables.initialize(supply, controller, {
+    from: controller,
+    gas: 5e5,
+    gasPrice
+  });
+  const recInit = await txReceipt(eth, txInit);
+  const index = new BigNumber(recInit.logs[0].data.slice(2), 16);
+  logInfo("Initial distribution");
+  await Promise.all(
+    security.investors.map(
+      async (investor: { address: Address; amount: BigNumber }) => {
+        logInfo(
+          `Distributing ${investor.amount.toString()} to ${investor.address}`
+        );
+        const tx = CapTables.transfer(
+          index,
+          controller,
+          investor.address,
+          investor.amount,
+          {
+            from: controller,
+            gas: 5e5,
+            gasPrice
+          }
+        );
+        await txReceipt(eth, tx);
+      }
+    )
+  );
+  return index;
+}
+
+/*  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  */
+
+export async function initToken(
+  this: void,
+  securityId: SecurityId,
+  capTables: Address,
+  admin: Address,
+  controller: Address,
+  gasPrice: BigNumber,
+  eth: Web3.EthApi
+): Promise<{
+  middleware: Address;
+  front: Address;
+}> {
+  logInfo("Deploying SimplifiedLogic");
+  const txSimplifiedLogic = eth
+    .contract(SimplifiedLogic.abi)
+    .new(
+      securityId,
+      capTables, 
+      admin,
+      controller,
+      {
+        data: SimplifiedLogic.bytecode,
+        from: controller,
+        gas: 1.5e6,
+        gasPrice
+      }
+    );
+  const recSimplifiedLogic = await txReceipt(
+    eth,
+    txSimplifiedLogic.transactionHash
+  );
+  const simplifiedLogicAddress = recSimplifiedLogic.contractAddress as string;
+  logDebug(`SimplifiedLogic address: ${simplifiedLogicAddress}`);
+  const CapTables = eth.contract(CapTablesArtifact.abi).at(capTables);
+  logInfo("Migrating the cap table to SimplifiedLogic");
+  const txMigrate = CapTables.migrate(securityId, simplifiedLogicAddress, {
+    from: controller,
+    gas: 5e5,
+    gasPrice
+  });
+  await txReceipt(eth, txMigrate);
+  logInfo("Deploying the token front");
+  const txFront = eth
+    .contract(TokenFront.abi)
+    .new(
+      recSimplifiedLogic.contractAddress, 
+      admin,
+      {
+        data: TokenFront.bytecode,
+        from: controller,
+        gas: 1e6,
+        gasPrice
+      }
+    );
+  const recTokenFront = await txReceipt(eth, txFront.transactionHash);
+  const front = recTokenFront.contractAddress as string;
+  const simplifiedLogic = eth
+    .contract(SimplifiedLogic.abi)
+    .at(simplifiedLogicAddress);
+  logInfo("Setting the front");
+  const txSetFront = simplifiedLogic.setFront(recTokenFront.contractAddress, {
+    from: admin,
+    gas: 5e5,
+    gasPrice
+  });
+  await txReceipt(eth, txSetFront);
+  return {
+    front,
+    middleware: simplifiedLogicAddress
+  };
+}
+
+/*  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  */
+
+function totalSupply(security: BaseSecurity) {
+  const step = (supply: BigNumber, shares: { amount: BigNumber }) =>
+    supply.plus(shares.amount);
+  return security.investors.reduce(step, new BigNumber(0));
+}
+
+function logDebug(msg: string) {
+  console.log(msg);
+}
+
+function logInfo(msg: string) {
+  console.log(msg);
 }
