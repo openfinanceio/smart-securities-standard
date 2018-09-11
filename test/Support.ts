@@ -3,8 +3,6 @@ import { BigNumber } from "bignumber.js";
 import { TransactionReceipt } from "ethereum-types";
 import * as Web3 from "web3";
 
-import { RegD } from "../src/Types";
-
 export const environment = (web3: Web3) => {
   if (!web3.isConnected()) {
     console.log("\x1b[33m\x1b[41m%s\x1b[0m", "Node not connected");
@@ -24,24 +22,6 @@ export const environment = (web3: Web3) => {
       investor3: web3.eth.accounts[7],
       issuer,
       securityOwner
-    },
-    security: (
-      amlKycAddr: string,
-      accreditationAddr: string,
-      investors: { address: string; amount: BigNumber }[]
-    ) => {
-      const s: RegD = {
-        __type: "RegD",
-        checkers: {
-          amlKyc: amlKycAddr,
-          accreditation: accreditationAddr
-        },
-        investors,
-        isFund: false,
-        metadata: { name: "Security1" },
-        admin: securityOwner
-      };
-      return s;
     }
   };
 };

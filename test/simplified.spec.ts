@@ -19,7 +19,7 @@ const controller = env.roles.controller;
 const owner = env.roles.securityOwner;
 
 const test = async (n: number) => {
-  const capTables = await init(controller, new BigNumber(0), web3.eth);
+  const [capTables] = await init(controller, "0", web3.eth);
   if (n < 1) {
     return;
   }
@@ -31,11 +31,11 @@ const test = async (n: number) => {
     metadata: { name: "TheSecurity" },
     admin: owner
   };
-  const { front, middleware, securityId } = await issue(
+  const [{ front, middleware, securityId }] = await issue(
     security,
     capTables,
     env.roles.controller,
-    new BigNumber(0),
+    "0",
     web3.eth
   );
   if (n == 2) {
@@ -131,10 +131,9 @@ const test = async (n: number) => {
     const finalization = async (txHash: string, txr: TransferRequest) => {
       const rec = await txReceipt(web3.eth, txHash);
       assert.equal(rec.logs.length, 1, "log length");
-      const data = rec.logs[0].data;
-      const observedIndex = new BigNumber(data.slice(2, 2 + 64), 16);
+      const observedIndex = new BigNumber(rec.logs[0].topics[1].slice(2), 16);
       assert(txr.index.equals(observedIndex), "indices");
-      const errorCode = new BigNumber(data.slice(2 + 64), 16);
+      const errorCode = new BigNumber(rec.logs[0].data.slice(2), 16);
       const targetCode = txr.index.equals(1) ? 1 : 0;
       assert.equal(errorCode.toNumber(), targetCode, "error code");
     };
@@ -255,14 +254,14 @@ describe("Simplified s3", () => {
   });
   it("should transfer issued tokens", async () => {
     await test(2);
-  })
+  });
   it("should block the transfer of issued tokens", async () => {
     await test(3);
-  })
+  });
   it("should handle multiple transfers correctly", async () => {
     await test(4);
-  })
+  });
   it("should migrate", async () => {
     await test(5);
-  })
+  });
 });
