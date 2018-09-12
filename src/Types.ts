@@ -1,4 +1,5 @@
 import { BigNumber } from "bignumber.js";
+import { TxData } from "ethereum-types";
 
 /** 20 byte hex-encoded key hash prefixed with "0x" */
 export type Address = string;
@@ -16,7 +17,7 @@ export interface BaseSecurity {
 }
 
 // A log entry for something that we just did
-export type TranscriptEntry = /* call */
+export type TranscriptEntry /* call */ =
   | {
       type: "call";
       description: string;
@@ -30,7 +31,14 @@ export type TranscriptEntry = /* call */
       data: { [key: string]: unknown };
     };
 
+export interface OfflineTranscriptEntry {
+  txData: TxData;
+  description: string;
+  params: { [key: string]: unknown };
+}
+
 export type Transcript = Array<TranscriptEntry>;
+export type OfflineTranscript = Array<OfflineTranscriptEntry>;
 
 /** A selection of transfer errors */
 export namespace Errors {

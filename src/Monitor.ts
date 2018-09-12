@@ -1,4 +1,4 @@
-import { SimplifiedLogic } from "./Contracts";
+import { SimplifiedTokenLogic } from "./Contracts";
 import { Address } from "./Types";
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
@@ -32,7 +32,9 @@ export async function handleTransfers<A>(
   decision: (tr: Transfer) => Promise<[number, A]>,
   finalization: (txHash: string, extraData: A) => Promise<void>
 ): Promise<BigNumber> {
-  const simplifiedLogic = eth.contract(SimplifiedLogic.abi).at(logicAddress);
+  const simplifiedLogic = eth
+    .contract(SimplifiedTokenLogic.abi)
+    .at(logicAddress);
   let workingIndex = new BigNumber(startingIndex);
   const checkActive = (index: BigNumber) => {
     const [, , , , transferStatus] = simplifiedLogic.transferRequests.call(

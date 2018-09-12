@@ -10,5 +10,17 @@ export interface Artifact {
 }
 
 export const CapTables = (CapTablesJson as any) as Artifact;
-export const SimplifiedLogic = (SimplifiedLogicJson as any) as Artifact;
+export const SimplifiedTokenLogic = (SimplifiedLogicJson as any) as Artifact;
 export const TokenFront = (TokenFrontJson as any) as Artifact;
+
+export const sigHashes = {
+  CapTables: {
+    initialize: "da35a26f",
+    migrate: "405b84fa",
+    transfer: "36cd52a6"
+  },
+  SimplifiedTokenLogic: {
+    setFront: "ef82f95c",
+    transferOwnership: "f2fde38b"
+  }
+};

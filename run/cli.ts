@@ -3,10 +3,9 @@
 import * as program from "commander";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import * as Web3 from "web3";
+import { createLogger } from "winston";
 
-import { init } from "../src/Init";
-import { issue } from "../src/Issue";
-import { BaseSecurity, Transcript } from "../src/Types";
+import { init, issue, BaseSecurity, Transcript } from "../src";
 
 // ~~~~~~~~~~ //
 // DATA MODEL //
@@ -55,6 +54,10 @@ interface Report {
   };
 }
 
+// ~~~~~~~~~~~~~ //
+// CONFIGURATION //
+// ~~~~~~~~~~~~~ //
+
 const PWD = process.env["PWD"];
 const defaultConfig = `${PWD}/S3-conf.json`;
 const defaultSpec = `${PWD}/S3-spec.json`;
@@ -78,6 +81,8 @@ program
   )
   .parse(process.argv);
 
+const log = createLogger();
+
 async function execute(
   configFile: string,
   declarationFile: string,
@@ -85,7 +90,7 @@ async function execute(
 ) {
   // We will never overwrite the output file
   if (existsSync(outputFile)) {
-    console.log(
+    log.error(
       `The output target ${outputFile} exists already.  Please deal with it.  Aborting!`
     );
     process.exit(1);
@@ -132,7 +137,10 @@ async function execute(
           capTables,
           config.controller,
           gasPrice(),
-          web3.eth
+          {
+            eth: web3.eth,
+            log
+          }
         );
         transcripts.push(issueTranscript);
         deployments.push({
@@ -142,8 +150,8 @@ async function execute(
           logic: middleware
         });
       } catch (err) {
-        console.log("There was a problem handling", path);
-        console.log(err);
+        log.error(`There was a problem handling ${path}`);
+        log.error(err);
       }
     }
     const report: Report = {
@@ -155,7 +163,7 @@ async function execute(
     };
     writeFileSync(outputFile, JSON.stringify(report), "utf8");
   } catch (err) {
-    console.log("Oops there was a problem: ", err);
+    log.error(`Oops there was a problem: ${err}`);
   }
 }
 

@@ -1,13 +1,15 @@
 import {
   CapTables as CapTablesArtifact,
-  SimplifiedLogic,
+  SimplifiedTokenLogic,
   TokenFront
-} from "./Contracts";
-import { Address, BaseSecurity, SecurityId, Transcript } from "./Types";
-import { txReceipt } from "./Web3";
+} from "../Contracts";
+import { Address, BaseSecurity, SecurityId, Transcript } from "../Types";
+import { txReceipt } from "../Web3";
+import { totalSupply } from "./Util";
 
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
+import { Logger } from "winston";
 
 /**
  * Issue a security on S3
@@ -21,7 +23,10 @@ export async function issue(
   capTables: Address,
   controller: Address,
   gasPrice: string,
-  eth: Web3.EthApi
+  kit: {
+    eth: Web3.EthApi;
+    log: Logger;
+  }
 ): Promise<
   [
     {
@@ -37,7 +42,7 @@ export async function issue(
     capTables,
     controller,
     gasPrice,
-    eth
+    kit
   );
   const [{ front, middleware }, transcript1] = await initToken(
     securityId,
@@ -45,7 +50,7 @@ export async function issue(
     security.admin,
     controller,
     gasPrice,
-    eth
+    kit
   );
   return [
     {
@@ -65,18 +70,21 @@ export async function initCapTable(
   capTables: Address,
   controller: Address,
   gasPrice: string,
-  eth: Web3.EthApi
+  kit: {
+    eth: Web3.EthApi;
+    log: Logger;
+  }
 ): Promise<[SecurityId, Transcript]> {
   const transcript: Transcript = [];
-  const CapTables = eth.contract(CapTablesArtifact.abi).at(capTables);
+  const CapTables = kit.eth.contract(CapTablesArtifact.abi).at(capTables);
   const supply = totalSupply(security);
-  logInfo("Deploying the cap table");
+  kit.log.debug("Deploying the cap table");
   const txInit = CapTables.initialize(supply, controller, {
     from: controller,
     gas: 5e5,
     gasPrice
   });
-  const recInit = await txReceipt(eth, txInit);
+  const recInit = await txReceipt(kit.eth, txInit);
   const index = new BigNumber(recInit.logs[0].data.slice(2), 16);
   transcript.push({
     type: "send",
@@ -89,14 +97,14 @@ export async function initCapTable(
       index
     }
   });
-  logInfo("Initial distribution");
+  kit.log.debug("Initial distribution");
   await Promise.all(
     security.investors.map(
       async (investor: { address: Address; amount: BigNumber }) => {
         const description = `Distributing ${investor.amount.toString()} to ${
           investor.address
         }`;
-        logInfo(description);
+        kit.log.info(description);
         const tx = CapTables.transfer(
           index,
           controller,
@@ -108,7 +116,7 @@ export async function initCapTable(
             gasPrice
           }
         );
-        const rec = await txReceipt(eth, tx);
+        const rec = await txReceipt(kit.eth, tx);
         transcript.push({
           type: "send",
           description,
@@ -136,7 +144,10 @@ export async function initToken(
   admin: Address,
   controller: Address,
   gasPrice: string,
-  eth: Web3.EthApi
+  kit: {
+    eth: Web3.EthApi;
+    log: Logger;
+  }
 ): Promise<
   [
     {
@@ -146,18 +157,18 @@ export async function initToken(
     Transcript
   ]
 > {
-  logInfo("Deploying SimplifiedLogic");
+  kit.log.debug("Deploying SimplifiedLogic");
   const transcript: Transcript = [];
-  const txSimplifiedLogic = eth
-    .contract(SimplifiedLogic.abi)
+  const txSimplifiedLogic = kit.eth
+    .contract(SimplifiedTokenLogic.abi)
     .new(securityId, capTables, admin, controller, {
-      data: SimplifiedLogic.bytecode,
+      data: SimplifiedTokenLogic.bytecode,
       from: controller,
       gas: 1.5e6,
       gasPrice
     });
   const recSimplifiedLogic = await txReceipt(
-    eth,
+    kit.eth,
     txSimplifiedLogic.transactionHash
   );
   const simplifiedLogicAddress = recSimplifiedLogic.contractAddress as string;
@@ -174,16 +185,16 @@ export async function initToken(
       simplifiedLogicAddress
     }
   });
-  logDebug(`SimplifiedLogic address: ${simplifiedLogicAddress}`);
-  const CapTables = eth.contract(CapTablesArtifact.abi).at(capTables);
+  kit.log.debug(`SimplifiedLogic address: ${simplifiedLogicAddress}`);
+  const CapTables = kit.eth.contract(CapTablesArtifact.abi).at(capTables);
   const migrationDescription = "Migrating the cap table to SimplifiedLogic";
-  logInfo(migrationDescription);
+  kit.log.debug(migrationDescription);
   const txMigrate = CapTables.migrate(securityId, simplifiedLogicAddress, {
     from: controller,
     gas: 5e5,
     gasPrice
   });
-  const migrationReceipt = await txReceipt(eth, txMigrate);
+  const migrationReceipt = await txReceipt(kit.eth, txMigrate);
   transcript.push({
     type: "send",
     description: migrationDescription,
@@ -195,8 +206,8 @@ export async function initToken(
     }
   });
   const tokenFrontDescription = "Deploying the token front";
-  logInfo(tokenFrontDescription);
-  const txFront = eth
+  kit.log.debug(tokenFrontDescription);
+  const txFront = kit.eth
     .contract(TokenFront.abi)
     .new(simplifiedLogicAddress, admin, {
       data: TokenFront.bytecode,
@@ -204,7 +215,7 @@ export async function initToken(
       gas: 1e6,
       gasPrice
     });
-  const recTokenFront = await txReceipt(eth, txFront.transactionHash);
+  const recTokenFront = await txReceipt(kit.eth, txFront.transactionHash);
   const front = recTokenFront.contractAddress as string;
   transcript.push({
     type: "send",
@@ -217,17 +228,17 @@ export async function initToken(
       admin
     }
   });
-  const simplifiedLogic = eth
-    .contract(SimplifiedLogic.abi)
+  const simplifiedLogic = kit.eth
+    .contract(SimplifiedTokenLogic.abi)
     .at(simplifiedLogicAddress);
   const setFrontDescription = "Setting the front";
-  logInfo(setFrontDescription);
+  kit.log.debug(setFrontDescription);
   const txSetFront = simplifiedLogic.setFront(front, {
     from: admin,
     gas: 5e5,
     gasPrice
   });
-  const setFrontReceipt = await txReceipt(eth, txSetFront);
+  const setFrontReceipt = await txReceipt(kit.eth, txSetFront);
   transcript.push({
     type: "send",
     description: setFrontDescription,
@@ -247,17 +258,3 @@ export async function initToken(
 }
 
 /*  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  */
-
-function totalSupply(security: BaseSecurity) {
-  const step = (supply: BigNumber, shares: { amount: BigNumber }) =>
-    supply.plus(shares.amount);
-  return security.investors.reduce(step, new BigNumber(0));
-}
-
-function logDebug(msg: string) {
-  console.log(msg);
-}
-
-function logInfo(msg: string) {
-  console.log(msg);
-}
