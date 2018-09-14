@@ -9,4 +9,14 @@ export {
   SimplifiedTokenLogic,
   TokenFront
 } from "./Contracts";
-export { BaseSecurity, Transcript } from "./Types";
+export {
+  BaseSecurity,
+  IndexedSecurity,
+  OfflineTranscriptEntry,
+  OfflineTranscript,
+  Transcript
+} from "./Types";
+
+import * as offline from "./Issue/Offline";
+
+export const issueOffline = offline;

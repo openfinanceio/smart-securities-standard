@@ -10,7 +10,11 @@ import {
 } from "ethereumjs-util";
 
 import { SimplifiedTokenLogic, TokenFront, sigHashes } from "../Contracts";
-import { BaseSecurity } from "../Types";
+import {
+  BaseSecurity,
+  OfflineTranscript,
+  OfflineTranscriptEntry
+} from "../Types";
 import { totalSupply } from "./Util";
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
@@ -20,67 +24,103 @@ import { totalSupply } from "./Util";
 export function initialize(
   this: void,
   security: BaseSecurity,
+  capTablesAddress: string,
   controller: Buffer,
   nonce: number,
   gasPrice: string,
   chainId: number
-) {
+): OfflineTranscriptEntry {
   const supply = totalSupply(security);
+  const controllerAddress = privToAddress(controller);
   const data = hexSmash([
     sigHashes.CapTables.initialize,
     toUInt256(supply),
-    privToAddress(controller)
+    padTo32(controllerAddress)
   ]);
   const newCapTable = new EthereumTx({
     data,
     from: privToAddress(controller),
+    to: capTablesAddress,
+    gas: 5e5,
     gasPrice,
     nonce,
     chainId
   });
   newCapTable.sign(controller);
-  return toZeroXHex(newCapTable.serialize());
+  return {
+    description: "initialize the cap table",
+    params: {
+      capTablesAddress,
+      supply: supply.toString(),
+      controllerAddress,
+      nonce
+    },
+    signedTx: toZeroXHex(newCapTable.serialize())
+  };
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 // STAGE 2: Configure cap table //
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
+export function configureNonceOffset(
+  this: void,
+  security: BaseSecurity
+): number {
+  return security.investors.length;
+}
+
 export function configure(
   this: void,
   security: BaseSecurity,
-  index: BigNumber,
+  securityId: BigNumber,
+  capTablesAddress: string,
   controller: Buffer,
   startingNonce: number,
   gasPrice: string,
   chainId: number
-) {
+): OfflineTranscript {
   const controllerAddress = privToAddress(controller);
   let nonce = startingNonce;
   return security.investors.map(investor => {
     const data = hexSmash([
       sigHashes.CapTables.transfer,
-      toUInt256(index),
-      controllerAddress,
-      investor.address,
+      toUInt256(securityId),
+      padTo32(controllerAddress),
+      padTo32(investor.address),
       toUInt256(investor.amount)
     ]);
     const setupInvestor = new EthereumTx({
       data,
       from: controllerAddress,
+      to: capTablesAddress,
       gasPrice,
+      gas: 5e5,
       nonce,
       chainId
     });
     setupInvestor.sign(controller);
     nonce++;
-    return toZeroXHex(setupInvestor.serialize());
+    return {
+      description: "distribution to investor",
+      params: {
+        securityId: securityId.toString(),
+        capTablesAddress,
+        controllerAddress,
+        investor: investor.address,
+        amount: investor.amount.toString(),
+        nonce
+      },
+      signedTx: toZeroXHex(setupInvestor.serialize())
+    };
   });
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 // STAGE 3: Deploy TokenFront and SimplifiedTokenLogic //
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+
+export const logicAndInterfaceNonceOffset = 5;
 
 export function logicAndInterface(
   this: void,
@@ -92,8 +132,8 @@ export function logicAndInterface(
   startingNonce: number,
   gasPrice: string,
   chainId: number
-) {
-  const transactions: Array<string> = [];
+): OfflineTranscript {
+  const transactions: OfflineTranscript = [];
   const controllerAddress = privToAddress(controller);
   let nonce = startingNonce;
   // Create simplified logic
@@ -110,12 +150,23 @@ export function logicAndInterface(
     data: simplifiedTokenLogicData,
     from: controllerAddress,
     gasPrice,
+    gas: 1.5e6,
     nonce,
     chainId
   });
   nonce++;
   newSimplifiedTokenLogic.sign(controller);
-  transactions.push(toZeroXHex(newSimplifiedTokenLogic.serialize()));
+  transactions.push({
+    description: "deploys SimplifiedTokenLogic instance",
+    params: {
+      securityId: securityId.toString(),
+      capTablesAddress,
+      controllerAddress,
+      resolverAddress,
+      nonce
+    },
+    signedTx: toZeroXHex(newSimplifiedTokenLogic.serialize())
+  });
   // Deploy the token front
   // ~~~~~~
   const tokenFrontAddress = genAddress(controllerAddress, nonce);
@@ -128,12 +179,22 @@ export function logicAndInterface(
     data: newTokenFrontData,
     from: controllerAddress,
     gasPrice,
+    gas: 1e6,
     nonce,
     chainId
   });
   nonce++;
   newTokenFront.sign(controller);
-  transactions.push(toZeroXHex(newTokenFront.serialize()));
+  transactions.push({
+    description: "deploys TokenFront",
+    params: {
+      simplifiedTokenLogicAddress,
+      admin: security.admin,
+      controllerAddress,
+      nonce
+    },
+    signedTx: toZeroXHex(newTokenFront.serialize())
+  });
   // Migrate the cap table
   // ~~~~~~~
   const migrateCapTableData = hexSmash([
@@ -145,13 +206,23 @@ export function logicAndInterface(
     data: migrateCapTableData,
     from: controllerAddress,
     to: capTablesAddress,
+    gas: 5e5,
     gasPrice,
     nonce,
     chainId
   });
   nonce++;
   migrateCapTable.sign(controller);
-  transactions.push(toZeroXHex(migrateCapTable.serialize()));
+  transactions.push({
+    description: "migrates the cap table to the SimplifiedTokenLogic instance",
+    params: {
+      securityId: securityId.toString(),
+      simplifiedTokenLogicAddress,
+      controllerAddress,
+      nonce
+    },
+    signedTx: toZeroXHex(migrateCapTable.serialize())
+  });
   // Set the token front
   // ~~~~~~
   const setFrontData = hexSmash([
@@ -162,13 +233,23 @@ export function logicAndInterface(
     from: controllerAddress,
     to: simplifiedTokenLogicAddress,
     data: setFrontData,
+    gas: 5e5,
     gasPrice,
     nonce,
     chainId
   });
   nonce++;
   setFront.sign(controller);
-  transactions.push(toZeroXHex(setFront.serialize()));
+  transactions.push({
+    description: "sets SimplifiedTokenLogic.front",
+    params: {
+      tokenFrontAddress,
+      simplifiedTokenLogicAddress,
+      controllerAddress,
+      nonce
+    },
+    signedTx: toZeroXHex(setFront.serialize())
+  });
   // Change the administrator
   // ~~~~~~
   const changeAdministratorData = hexSmash([
@@ -179,13 +260,22 @@ export function logicAndInterface(
     from: controllerAddress,
     to: simplifiedTokenLogicAddress,
     data: changeAdministratorData,
+    gas: 1e5,
     gasPrice,
     nonce,
     chainId
   });
   nonce++;
   changeAdministrator.sign(controller);
-  transactions.push(toZeroXHex(changeAdministrator.serialize()));
+  transactions.push({
+    description: "changes SimplifiedTokenLogic.admin",
+    params: {
+      admin: security.admin,
+      simplifiedTokenLogicAddress,
+      nonce
+    },
+    signedTx: toZeroXHex(changeAdministrator.serialize())
+  });
   return transactions;
 }
 
@@ -193,12 +283,14 @@ export function logicAndInterface(
 
 const toZeroXHex = (buf: Buffer) => addHexPrefix(buf.toString("hex"));
 
-const toUInt256 = (n: BigNumber) => padTo32(n.toString(16));
+const toUInt256 = (n: BigNumber | string | number) =>
+  padTo32(new BigNumber(n).toString(16));
 
 const genAddress = (addr: string, n: number) => {
   const addrBuffer = Buffer.from(noHexPrefix(addr), "hex");
-  const nonceBuffer = Buffer.from(n.toString(16), "hex");
-  return (generateAddress(addrBuffer, nonceBuffer) as Buffer).toString("hex");
+  return addHexPrefix(
+    (generateAddress(addrBuffer, n as any) as Buffer).toString("hex")
+  );
 };
 
 const privToAddress = (buf: Buffer) =>
