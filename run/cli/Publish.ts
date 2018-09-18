@@ -1,35 +1,41 @@
+import { BigNumber } from "bignumber.js";
 import * as readline from "readline";
 import * as Web3 from "web3";
 import { Logger } from "winston";
 
 import { OfflineTranscriptEntry } from "../../src";
+import { gweiToWei } from "./Util";
 
 export async function publishInteractive(
-  choices: Map<number, OfflineTranscriptEntry>,
+  entry: OfflineTranscriptEntry,
   web3: Web3,
   log: Logger
 ): Promise<string> {
   return new Promise(resolve => {
-    const gasPrices = Array.from(choices.keys());
+    const choices = new Map(entry.signedTxes);
+    const gasPrices = entry.signedTxes.map(([weiPrice]) =>
+      new BigNumber(weiPrice, 16).dividedBy(1e9).toString()
+    );
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
     const attempt = () =>
       rl.question(
-        `Choose the gas price you would like to use: \x0a${gasPrices.join(
+        `Now: ${
+          entry.description
+        }\x0aChoose the gas price you would like to use: \x0a${gasPrices.join(
           " "
         )}\x0a`,
         answer => {
           try {
-            const gasChoice = parseInt(answer);
+            const gasChoice = gweiToWei(parseInt(answer));
             if (choices.has(gasChoice)) {
-              const entry = choices.get(gasChoice);
-              log.info(entry!.description);
-              const hash = web3.eth.sendRawTransaction(entry!.signedTx);
+              const signedData = choices.get(gasChoice) as string;
+              const hash = web3.eth.sendRawTransaction(signedData);
               log.info(`sent: ${hash}`);
               rl.question(
-                "type retry if you would like to try with more gas\x0a",
+                "Type retry if you would like to try with more gas; and return to continue.\x0a",
                 reply => {
                   if (reply === "retry") {
                     attempt();

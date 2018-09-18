@@ -50,6 +50,6 @@ export interface OnlineReport {
 
 export interface OfflineReport {
   nonce: number;
-  stage1: Array<[string, Array<[number, OfflineTranscriptEntry]>]>;
-  stage2: Array<[string, Array<[number, OfflineTranscript]>]>;
+  stage1: Array<[string, OfflineTranscriptEntry]>;
+  stage2: Array<[string, OfflineTranscript]>;
 }

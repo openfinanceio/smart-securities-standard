@@ -7,12 +7,7 @@ import * as _ from "lodash";
 import * as Web3 from "web3";
 import * as winston from "winston";
 
-import {
-  BaseSecurity,
-  IndexedSecurity,
-  OfflineTranscript,
-  OfflineTranscriptEntry
-} from "../src";
+import { BaseSecurity, IndexedSecurity } from "../src";
 import { txReceipt } from "../src/Web3";
 import { Config, Spec, OfflineReport } from "./cli/Types";
 import { initS3 } from "./cli/Init";
@@ -122,16 +117,17 @@ program
         const securities: Array<BaseSecurity> = spec.securityPaths.map(path =>
           JSON.parse(readFileSync(path, "utf8"))
         );
-        offlineStage1(
+        const [nonce, stage1] = offlineStage1(
           securities,
           {
             capTablesAddress: spec.capTables,
             startingGasPrice: gasPrice,
             chainId: env.chain
           },
-          outputFile,
           log
         );
+        log.debug(`writing ${outputFile}`);
+        writeFileSync(outputFile, JSON.stringify({ nonce, stage1 }), "utf8");
       } else if (env.stage === 2 && spec.resolver !== null) {
         log.debug("Stage 2");
         const securities: Array<IndexedSecurity> = spec.securityPaths.map(
@@ -142,17 +138,26 @@ program
           process.env.controller as string,
           "base64"
         );
-        offlineStage2(
+        const { nonce, stage1 } = JSON.parse(readFileSync(outputFile, "utf8"));
+        const stage2 = offlineStage2(
           securities,
           {
             capTablesAddress: spec.capTables,
             resolver: spec.resolver,
             startingGasPrice: gasPrice,
             chainId: env.chain,
+            startingNonce: nonce,
             controller
           },
-          outputFile,
           log
+        );
+        writeFileSync(
+          outputFile,
+          JSON.stringify({
+            stage1,
+            stage2
+          }),
+          "utf8"
         );
       } else {
         log.debug("Unable to proceed");
@@ -184,13 +189,9 @@ program
         readFileSync(env.report, "utf8")
       );
       if (env.stage === 1) {
-        for (let [securityName, transactions] of report.stage1) {
+        for (let [securityName, transaction] of report.stage1) {
           log.info(`Initializing ${securityName}`);
-          const hash = await publishInteractive(
-            new Map(transactions),
-            web3,
-            log
-          );
+          const hash = await publishInteractive(transaction, web3, log);
           const rec = await txReceipt(web3.eth, hash);
           const securityId = new BigNumber(
             rec.logs[0].data.slice(2),
@@ -201,8 +202,8 @@ program
       } else if (env.stage === 2) {
         for (let [securityName, transactions] of report.stage2) {
           log.info(`Finishing ${securityName}`);
-          for (let choices of repackTranscripts(transactions)) {
-            await publishInteractive(choices, web3, log);
+          for (let transaction of transactions) {
+            await publishInteractive(transaction, web3, log);
           }
         }
       } else {
@@ -219,20 +220,6 @@ program.parse(process.argv);
 // ~~~~~~~ //
 // HELPERS //
 // ~~~~~~~ //
-
-function repackTranscripts(
-  stage2: Array<[number, OfflineTranscript]>
-): Array<Map<number, OfflineTranscriptEntry>> {
-  const sequence: Array<Map<number, OfflineTranscriptEntry>> = [];
-  const n = stage2.reduce((n, [, t]) => Math.max(n, t.length), 0);
-  for (let i = 0; i < n; i++) {
-    sequence[i] = new Map();
-    for (let x of stage2) {
-      sequence[i].set(x[0], x[1][i]);
-    }
-  }
-  return sequence;
-}
 
 function checkOutput(outputFile: string) {
   // We will never overwrite the output file

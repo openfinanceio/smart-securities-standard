@@ -37,7 +37,8 @@ export type TranscriptEntry /* call */ =
 export interface OfflineTranscriptEntry {
   description: string;
   params: { [key: string]: unknown };
-  signedTx: string;
+  // There will be signed transactions for many gas price levels
+  signedTxes: Array<[string, string]>;
 }
 
 export type Transcript = Array<TranscriptEntry>;

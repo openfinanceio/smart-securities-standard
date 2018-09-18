@@ -1,7 +1,6 @@
 import { BigNumber } from "bignumber.js";
 import { randomBytes } from "crypto";
 import { addHexPrefix, privateToAddress } from "ethereumjs-util";
-import { readFileSync, writeFileSync } from "fs";
 import * as _ from "lodash";
 import { Logger } from "winston";
 
@@ -12,7 +11,7 @@ import {
   OfflineTranscriptEntry,
   issueOffline
 } from "../../src";
-import { OfflineReport } from "./Types";
+import { gweiToWei } from "./Util";
 
 export function offlineStage1(
   this: void,
@@ -23,7 +22,6 @@ export function offlineStage1(
     startingGasPrice: number;
     chainId: number;
   },
-  outputFile: string,
   log: Logger
 ) {
   const controller = randomBytes(32);
@@ -36,41 +34,27 @@ export function offlineStage1(
     2
   );
   let nonce = 0;
-  const stage1: Array<[string, Array<[number, OfflineTranscriptEntry]>]> = [];
+  const stage1: Array<[string, OfflineTranscriptEntry]> = [];
   securities.forEach(security => {
     const name = security.metadata.name;
     log.debug("handling " + name);
-    const items: Array<[number, OfflineTranscriptEntry]> = [];
-    gasPrices.forEach(price => {
-      try {
-        const gasPrice = gweiToWei(price);
-        log.debug("Pushing security", name, "at gas price", price);
-        items.push([
-          price,
-          issueOffline.initialize(
-            security,
-            ethParams.capTablesAddress,
-            controller,
-            nonce,
-            gasPrice,
-            ethParams.chainId
-          )
-        ]);
-      } catch (err) {
-        log.error(err);
-      }
-    });
-    nonce++; // Note that we only plan to publish one transaction per security here
-    stage1.push([name, items]);
+    try {
+      const [newNonce, entry] = issueOffline.initialize(security, {
+        capTablesAddress: ethParams.capTablesAddress,
+        controller,
+        startingNonce: nonce,
+        gasPrices: gasPrices.map(gweiToWei),
+        chainId: ethParams.chainId
+      });
+      nonce = newNonce;
+      stage1.push([name, entry]);
+    } catch (err) {
+      log.error(err);
+    }
   });
-  log.debug(`writing ${outputFile}`);
-  writeFileSync(
-    outputFile,
-    JSON.stringify({ nonce, stage1, stage2: {} }),
-    "utf8"
-  );
   log.info(controllerAddress);
   log.info(controller.toString("base64"));
+  return [nonce, stage1];
 }
 
 export function offlineStage2(
@@ -81,68 +65,53 @@ export function offlineStage2(
     resolver: string;
     /** gas price in gwei */
     startingGasPrice: number;
+    startingNonce: number;
     chainId: number;
     controller: Buffer;
   },
-  outputFile: string,
   log: Logger
 ) {
   try {
-    const report: OfflineReport = JSON.parse(readFileSync(outputFile, "utf8"));
     const gasPrices = _.range(
       ethParams.startingGasPrice,
       ethParams.startingGasPrice * 10,
       2
     );
-    const stage2: Array<[string, Array<[number, OfflineTranscript]>]> = [];
-    let nonce = report.nonce;
+    const stage2: Array<[string, OfflineTranscript]> = [];
+    let nonce = ethParams.startingNonce;
     securities.forEach(security => {
       const name = security.metadata.name;
       const securityId = new BigNumber(security.securityId);
-      const items: Array<[number, OfflineTranscript]> = [];
-      const configureOffset = issueOffline.configureNonceOffset(security);
-      gasPrices.forEach(gasPrice => {
-        const weiPrice = gweiToWei(gasPrice);
-        const configureTranscript = issueOffline.configure(
-          security,
-          securityId,
-          ethParams.capTablesAddress,
-          ethParams.controller,
-          nonce,
-          weiPrice,
-          ethParams.chainId
-        );
-        const deployTranscript = issueOffline.logicAndInterface(
-          security,
-          securityId,
-          ethParams.capTablesAddress,
-          ethParams.resolver,
-          ethParams.controller,
-          nonce + configureOffset,
-          weiPrice,
-          ethParams.chainId
-        );
-        items.push([gasPrice, configureTranscript.concat(deployTranscript)]);
-      });
-      // Update the nonce by the number of txs that we are going to send for this security
-      nonce += configureOffset + issueOffline.logicAndInterfaceNonceOffset;
-      stage2.push([name, items]);
+      const [nonceA, configureTranscript] = issueOffline.configure(
+        security,
+        securityId,
+        {
+          capTablesAddress: ethParams.capTablesAddress,
+          controller: ethParams.controller,
+          startingNonce: nonce,
+          gasPrices: gasPrices.map(gweiToWei),
+          chainId: ethParams.chainId
+        }
+      );
+      const [nonceB, deployTranscript] = issueOffline.logicAndInterface(
+        security,
+        securityId,
+        {
+          capTablesAddress: ethParams.capTablesAddress,
+          resolverAddress: ethParams.resolver,
+          controller: ethParams.controller,
+          startingNonce: nonceA,
+          gasPrices: gasPrices.map(gweiToWei),
+          chainId: ethParams.chainId
+        }
+      );
+      nonce = nonceB;
+      stage2.push([name, configureTranscript.concat(deployTranscript)]);
     });
-    writeFileSync(
-      outputFile,
-      JSON.stringify({
-        nonce,
-        stage1: report.stage1,
-        stage2
-      }),
-      "utf8"
-    );
+    return stage2;
   } catch (err) {
     log.error("There was a problem");
     log.error(err);
+    return undefined as any;
   }
-}
-
-function gweiToWei(gwei: number) {
-  return addHexPrefix(new BigNumber(gwei).mul(1e9).toString(16));
 }
