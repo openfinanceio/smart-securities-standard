@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 import * as Web3 from "web3";
 import { Logger } from "winston";
 
@@ -9,17 +9,8 @@ export async function issueOnline(
   this: void,
   configFile: string,
   declarationFile: string,
-  outputFile: string,
   log: Logger
 ) {
-  // We will never overwrite the output file
-  if (existsSync(outputFile)) {
-    log.error(
-      `The output target ${outputFile} exists already.  Please deal with it.  Aborting!`
-    );
-    process.exitCode = 1;
-    return;
-  }
   try {
     // Let's read in the configuration
     const config: Config = JSON.parse(readFileSync(configFile, "utf8"));
@@ -88,7 +79,7 @@ export async function issueOnline(
         securities: deployments
       }
     };
-    writeFileSync(outputFile, JSON.stringify(report), "utf8");
+    return report;
   } catch (err) {
     log.error(`Oops there was a problem: ${err}`);
     process.exitCode = 1;

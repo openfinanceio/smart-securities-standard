@@ -1,9 +1,9 @@
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 import * as Web3 from "web3";
 import { init } from "../../src";
 import { Config, GasReport } from "./Types";
 
-export async function initS3(this: void, config: Config, outputFile: string) {
+export async function initS3(this: void, config: Config) {
   // We'll need to figure out gas prices
   const gasPrice = () => {
     const gasReport: GasReport = JSON.parse(
@@ -22,12 +22,8 @@ export async function initS3(this: void, config: Config, outputFile: string) {
     gasPrice(),
     web3.eth
   );
-  writeFileSync(
-    outputFile,
-    JSON.stringify({
-      capTables,
-      transcript
-    }),
-    "utf8"
-  );
+  return {
+    capTables,
+    transcript
+  };
 }

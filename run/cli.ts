@@ -2,7 +2,7 @@
 
 import { BigNumber } from "bignumber.js";
 import * as program from "commander";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import * as _ from "lodash";
 import * as Web3 from "web3";
 import * as winston from "winston";
@@ -50,9 +50,12 @@ program
     "path to the output file, with the action report",
     defaultInit
   )
-  .action(env => {
+  .action(async env => {
+    checkOutput(env.output);
     const config: Config = JSON.parse(readFileSync(env.config, "utf8"));
-    initS3(config, env.output);
+    const result = await initS3(config);
+    log.info(`CapTables instance @ ${result.capTables}`);
+    writeFileSync(env.output, JSON.stringify(result.transcript), "utf8");
   });
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
@@ -72,8 +75,10 @@ program
     "path to the output file, with the action report",
     defaultReport
   )
-  .action(env => {
-    issueOnline(env.config, env.declaration, env.output, log);
+  .action(async env => {
+    checkOutput(env.output);
+    const result = issueOnline(env.config, env.declaration, log);
+    writeFileSync(env.output, JSON.stringify(result), "utf8");
   });
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
@@ -103,12 +108,8 @@ program
   .action(env => {
     const outputFile = env.output;
     // We will never overwrite the output file
-    if (existsSync(outputFile) && env.stage === 1) {
-      log.error(
-        `The output target ${outputFile} exists already.  Please deal with it.  Aborting!`
-      );
-      process.exitCode = 1;
-      return;
+    if (env.stage === 1) {
+      checkOutput(outputFile);
     }
     try {
       const spec: Spec = JSON.parse(readFileSync(env.declaration, "utf8"));
@@ -231,4 +232,15 @@ function repackTranscripts(
     }
   }
   return sequence;
+}
+
+function checkOutput(outputFile: string) {
+  // We will never overwrite the output file
+  if (existsSync(outputFile)) {
+    log.error(
+      `The output target ${outputFile} exists already.  Please deal with it.  Aborting!`
+    );
+    process.exitCode = 1;
+    return;
+  }
 }
