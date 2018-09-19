@@ -11,7 +11,7 @@ import {
   TransferRequest
 } from "../src";
 import * as S3 from "../src";
-import { roles as getRoles, log } from "./Support";
+import { getRoles, log } from "./Support";
 
 const prov = new Web3.providers.HttpProvider("http://localhost:8545");
 const web3 = new Web3(prov);

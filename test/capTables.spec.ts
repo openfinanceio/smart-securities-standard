@@ -1,6 +1,6 @@
 import { CapTables } from "../src/Contracts";
 import { txReceipt } from "../src/Web3";
-import { assertSuccess, roles as getRoles } from "./Support";
+import { assertSuccess, getRoles } from "./Support";
 
 import * as assert from "assert";
 import { BigNumber } from "bignumber.js";

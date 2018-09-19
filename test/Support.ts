@@ -4,7 +4,7 @@ import { TransactionReceipt } from "ethereum-types";
 import * as Web3 from "web3";
 import * as winston from "winston";
 
-export const roles = (web3: Web3) => {
+export const getRoles = (web3: Web3) => {
   if (!web3.isConnected()) {
     console.log("\x1b[33m\x1b[41m%s\x1b[0m", "Node not connected");
     process.exit(1);
