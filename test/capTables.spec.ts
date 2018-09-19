@@ -1,14 +1,14 @@
 import { CapTables } from "../src/Contracts";
 import { txReceipt } from "../src/Web3";
-import { assertSuccess, environment } from "./Support";
+import { assertSuccess, roles as getRoles } from "./Support";
 
 import * as assert from "assert";
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
 
 const web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
-const env = environment(web3);
-const controller = env.roles.controller;
+const roles = getRoles(web3);
+const controller = roles.controller;
 
 describe("CapTables", () => {
   describe("initialize", () => {
@@ -19,11 +19,9 @@ describe("CapTables", () => {
         gas: 5e5
       });
       const { contractAddress } = await txReceipt(web3.eth, transactionHash);
-      const CT = web3.eth
-        .contract(CapTables.abi)
-        .at(contractAddress as string);
+      const CT = web3.eth.contract(CapTables.abi).at(contractAddress as string);
       const amount1 = new BigNumber(1e5);
-      const tx1 = CT.initialize(amount1, env.roles.issuer, {
+      const tx1 = CT.initialize(amount1, roles.issuer, {
         from: controller,
         gas: 5e5
       });
@@ -32,9 +30,9 @@ describe("CapTables", () => {
       assert(rec0.logs.length === 1, "log length");
       const id0 = new BigNumber(rec0.logs[0].data.slice(2), 16);
       assert(id0.equals(0), "id 1");
-      const bal = CT.balanceOf.call(id0, env.roles.issuer);
+      const bal = CT.balanceOf.call(id0, roles.issuer);
       assert(bal.equals(amount1), "balance");
-      const tx2 = CT.initialize(1e20, env.roles.investor1, {
+      const tx2 = CT.initialize(1e20, roles.investor1, {
         from: controller,
         gas: 5e5
       });
@@ -51,11 +49,9 @@ describe("CapTables", () => {
         gas: 5e5
       });
       const { contractAddress } = await txReceipt(web3.eth, transactionHash);
-      const CT = web3.eth
-        .contract(CapTables.abi)
-        .at(contractAddress as string);
+      const CT = web3.eth.contract(CapTables.abi).at(contractAddress as string);
       const amount1 = new BigNumber(1e5);
-      const tx1 = CT.initialize(amount1, env.roles.issuer, {
+      const tx1 = CT.initialize(amount1, roles.issuer, {
         from: controller,
         gas: 5e5
       });
@@ -63,7 +59,7 @@ describe("CapTables", () => {
       assertSuccess(rec0);
       const newManager = web3.eth.accounts[9];
       const tx2 = CT.migrate(0, newManager, {
-        from: env.roles.issuer,
+        from: roles.issuer,
         gas: 5e5
       });
       const rec2 = await txReceipt(web3.eth, tx2);
@@ -84,7 +80,7 @@ describe("CapTables", () => {
       });
       const { contractAddress } = await txReceipt(web3.eth, transactionHash);
       CT = web3.eth.contract(CapTables.abi).at(contractAddress as string);
-      const tx0 = CT.initialize(1e5, env.roles.issuer, {
+      const tx0 = CT.initialize(1e5, roles.issuer, {
         from: controller,
         gas: 5e5
       });
@@ -92,13 +88,9 @@ describe("CapTables", () => {
       securityId = new BigNumber(rec0.logs[0].data.slice(2), 16);
     });
     it("should transfer funds", async () => {
-      const tx1 = CT.transfer(
-        securityId,
-        env.roles.issuer,
-        env.roles.investor1,
-        1e3,
-        { from: env.roles.issuer }
-      );
+      const tx1 = CT.transfer(securityId, roles.issuer, roles.investor1, 1e3, {
+        from: roles.issuer
+      });
       const rec1 = await txReceipt(web3.eth, tx1);
       assertSuccess(rec1);
     }).timeout(10e3);
