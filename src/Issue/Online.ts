@@ -5,7 +5,7 @@ import {
 } from "../Contracts";
 import { Address, BaseSecurity, SecurityId, Transcript } from "../Types";
 import { txReceipt } from "../Web3";
-import { totalSupply } from "./Util";
+import { totalSupply } from "../Util";
 
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
