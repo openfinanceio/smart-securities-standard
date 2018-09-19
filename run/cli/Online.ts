@@ -1,36 +1,19 @@
-import { readFileSync } from "fs";
 import * as Web3 from "web3";
 import { Logger } from "winston";
 
-import { Config, GasReport, OnlineReport, S3, Spec } from "./Types";
+import { Config, OnlineReport, S3, Spec } from "./Types";
 import { BaseSecurity, Transcript, init, issue } from "../../src";
 
 export async function issueOnline(
   this: void,
-  configFile: string,
-  declarationFile: string,
+  config: Config,
+  spec: Spec,
+  securities: Array<BaseSecurity>,
+  gasPrice: () => string,
+  web3: Web3,
   log: Logger
 ) {
   try {
-    // Let's read in the configuration
-    const config: Config = JSON.parse(readFileSync(configFile, "utf8"));
-    // ... and the program that we're supposed to execute
-    const spec: Spec = JSON.parse(readFileSync(declarationFile, "utf8"));
-    const securities: Array<BaseSecurity> = spec.securityPaths.map(path =>
-      JSON.parse(readFileSync(path, "utf8"))
-    );
-    // We'll need to figure out gas prices
-    const gasPrice = () => {
-      const gasReport: GasReport = JSON.parse(
-        readFileSync(config.gasReportPath, "utf8")
-      );
-      return web3.toWei(gasReport.safeLow, "gwei");
-    };
-    const web3 = new Web3(
-      new Web3.providers.HttpProvider(
-        `http://${config.net.host}:${config.net.port}`
-      )
-    );
     let transcripts: Transcript[] = [];
     const getCapTables = async () => {
       if (spec.capTables === null) {

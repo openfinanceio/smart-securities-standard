@@ -9,7 +9,7 @@ import * as winston from "winston";
 
 import { BaseSecurity, IndexedSecurity } from "../src";
 import { txReceipt } from "../src/Web3";
-import { Config, Spec, OfflineReport } from "./cli/Types";
+import { Config, GasReport, Spec, OfflineReport } from "./cli/Types";
 import { initS3 } from "./cli/Init";
 import { issueOnline } from "./cli/Online";
 import { offlineStage1, offlineStage2 } from "./cli/Offline";
@@ -72,7 +72,26 @@ program
   )
   .action(async env => {
     checkOutput(env.output);
-    const result = issueOnline(env.config, env.declaration, log);
+    // Let's read in the configuration
+    const config: Config = JSON.parse(readFileSync(env.config, "utf8"));
+    // ... and the program that we're supposed to execute
+    const spec: Spec = JSON.parse(readFileSync(env.declaration, "utf8"));
+    const securities: Array<BaseSecurity> = spec.securityPaths.map(path =>
+      JSON.parse(readFileSync(path, "utf8"))
+    );
+    const web3 = new Web3(
+      new Web3.providers.HttpProvider(
+        `http://${config.net.host}:${config.net.port}`
+      )
+    );
+    // We'll need to figure out gas prices
+    const gasPrice = () => {
+      const gasReport: GasReport = JSON.parse(
+        readFileSync(config.gasReportPath, "utf8")
+      );
+      return web3.toWei(gasReport.safeLow, "gwei");
+    };
+    const result = issueOnline(config, spec, securities, gasPrice, web3, log);
     writeFileSync(env.output, JSON.stringify(result), "utf8");
   });
 
