@@ -136,6 +136,13 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
         return false; // The transfer has not taken place yet
     }
 
+    function setResolver(address _resolver)
+        public
+        onlyOwner
+    {
+        resolver = _resolver;
+    }
+
     function resolve(uint256 _txfrIndex, uint16 _code) 
         public 
         onlyResolver
