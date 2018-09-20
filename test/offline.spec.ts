@@ -105,6 +105,111 @@ describe("offline deployment", () => {
       assert(bal.equals(amount), "balance should be correct");
     });
   });
+  it("should set up SimplifiedTokenLogic and TokenFront", async () => {
+    const [capTable] = await S3.init(roles.controller, "0", web3.eth);
+    const [
+      ephemeralController,
+      ephemeralControllerAddress
+    ] = await fundedController(roles.controller);
+    const [newNonce, entry] = S3.issueOffline.initialize(security, {
+      capTablesAddress: capTable,
+      controller: ephemeralController,
+      startingNonce: 0,
+      gasPrices: ["0"],
+      chainId
+    });
+    const hash = web3.eth.sendRawTransaction(entry.signedTxes[0][1]);
+    const securityId = await getSecurityId(hash);
+    const [nextNonce, entries] = S3.issueOffline.configure(
+      security,
+      securityId,
+      {
+        capTablesAddress: capTable,
+        controller: ephemeralController,
+        startingNonce: newNonce,
+        gasPrices: ["0"],
+        chainId
+      }
+    );
+    for (let entry of entries) {
+      const hash = web3.eth.sendRawTransaction(entry.signedTxes[0][1]);
+      await txReceipt(web3.eth, hash);
+    }
+    const [, nextEntries] = S3.issueOffline.logicAndInterface(
+      security,
+      securityId,
+      {
+        capTablesAddress: capTable,
+        controller: ephemeralController,
+        resolverAddress: roles.resolver,
+        startingNonce: nextNonce,
+        gasPrices: ["0"],
+        chainId
+      }
+    );
+    // 1. deploy SimplifedTokenLogic
+    // 2. deploy TokenFront
+    // 3. migrate the cap table
+    // 4. set the front
+    // 5. set the administrator
+    assert.equal(nextEntries.length, 5, "should publish 5 transactions");
+    for (let entry of nextEntries) {
+      const hash = web3.eth.sendRawTransaction(entry.signedTxes[0][1]);
+      await txReceipt(web3.eth, hash);
+    }
+    const [
+      {
+        params: { simplifiedTokenLogicAddress }
+      },
+      {
+        params: { tokenFrontAddress }
+      }
+    ] = nextEntries;
+    const tokenFront = web3.eth
+      .contract(S3.TokenFront.abi)
+      .at(<string>tokenFrontAddress);
+    const simplifiedTokenLogic = web3.eth
+      .contract(S3.SimplifiedTokenLogic.abi)
+      .at(<string>simplifiedTokenLogicAddress);
+    // Observed values //
+    // SimplifiedTokenLogic
+    // front
+    {
+      const observed = simplifiedTokenLogic.front.call();
+      assert.equal(observed, tokenFrontAddress, "observed front should match");
+    }
+    // capTables
+    {
+      const observed = simplifiedTokenLogic.capTables.call();
+      assert.equal(observed, capTable, "observed cap tables should match");
+    }
+    // resolver
+    {
+      const observed = simplifiedTokenLogic.resolver.call();
+      assert.equal(observed, roles.resolver, "resolver");
+    }
+    // owner
+    {
+      const observed = simplifiedTokenLogic.owner.call();
+      assert.equal(observed, roles.securityOwner, "SimplifiedTokenLogic owner");
+    }
+    // TokenFront
+    // logic
+    {
+      const observed = tokenFront.tokenLogic.call();
+      assert.equal(observed, simplifiedTokenLogicAddress, "tokenLogic");
+    }
+    // owner
+    {
+      const observed = tokenFront.owner.call();
+      assert.equal(observed, roles.securityOwner, "TokenFront owner");
+    }
+    // balances
+    security.investors.forEach(investor => {
+      const bal = tokenFront.balanceOf.call(investor.address);
+      assert(bal.equals(investor.amount), "should distribute the right amount");
+    });
+  });
 });
 
 // ~~~~~~~ //

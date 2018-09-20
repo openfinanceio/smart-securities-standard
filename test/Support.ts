@@ -15,7 +15,8 @@ export const getRoles = (web3: Web3) => {
     investor2: web3.eth.accounts[4],
     investor3: web3.eth.accounts[7],
     issuer: web3.eth.accounts[5],
-    securityOwner: web3.eth.accounts[6]
+    securityOwner: web3.eth.accounts[6],
+    resolver: web3.eth.accounts[8]
   };
 };
 

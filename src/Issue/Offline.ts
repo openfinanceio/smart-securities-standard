@@ -179,6 +179,7 @@ export function logicAndInterface(
   transactions.push({
     description: "deploys SimplifiedTokenLogic instance",
     params: {
+      simplifiedTokenLogicAddress,
       securityId: securityId.toString(),
       capTablesAddress: ethParams.capTablesAddress,
       controllerAddress,
@@ -215,6 +216,7 @@ export function logicAndInterface(
   transactions.push({
     description: "deploys TokenFront",
     params: {
+      tokenFrontAddress,
       simplifiedTokenLogicAddress,
       admin: security.admin,
       controllerAddress,
