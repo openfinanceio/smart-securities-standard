@@ -1,0 +1,7 @@
+#! /bin/bash
+
+if [ ! -f dist/bin/cli.js ]; then
+  webpack
+fi
+
+node dist/bin/cli.js $@

@@ -1,6 +1,6 @@
 {
   "name": "@openfinance/smart-securities-standard",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "license": "MIT",
@@ -10,8 +10,11 @@
   },
   "scripts": {
     "build": "tsc",
+    "build-cli": "webpack",
+    "cli": "scripts/cliHarness",
     "compile": "scripts/compile",
     "make-docs": "typedoc --mode modules --out ./docs",
+    "make-example": "ts-node run/generateExample.ts",
     "test": "tsc -p tsconfig.test.json && mocha dist/test/*.spec.js src/"
   },
   "devDependencies": {
@@ -20,11 +23,17 @@
     "@types/mocha": "^2.2.48",
     "ethereum-types": "^0.0.2",
     "mocha": "^5.0.1",
-    "typescript": "^2.8.3"
+    "ts-node": "^7.0.1",
+    "typedoc": "^0.12.0",
+    "typescript": "^3.0.0",
+    "webpack": "latest"
   },
   "dependencies": {
     "@0xproject/web3-wrapper": "^0.6.1",
     "bignumber.js": "^5.0.0",
+    "commander": "^2.18.0",
+    "ethereumjs-util": "^5.2.0",
+    "ethereumjs-tx": "^1.3.7",
     "lodash": "^4.17.5",
     "web3": "^0.20.6"
   }

@@ -11,9 +11,38 @@ export interface BaseSecurity {
   investors: { address: Address; amount: BigNumber }[];
   metadata: {
     name: string;
-    [prop: string]: any;
+    [prop: string]: unknown;
   };
 }
+
+export interface IndexedSecurity extends BaseSecurity {
+  securityId: number;
+}
+
+// A log entry for something that we just did
+export type TranscriptEntry /* call */ =
+  | {
+      type: "call";
+      description: string;
+      observation: { [key: string]: unknown };
+    }
+  | /* send */ {
+      type: "send";
+      description: string;
+      hash: string;
+      gasUsed: number;
+      data: { [key: string]: unknown };
+    };
+
+export interface OfflineTranscriptEntry {
+  description: string;
+  params: { [key: string]: unknown };
+  // There will be signed transactions for many gas price levels
+  signedTxes: Array<[string, string]>;
+}
+
+export type Transcript = Array<TranscriptEntry>;
+export type OfflineTranscript = Array<OfflineTranscriptEntry>;
 
 /** A selection of transfer errors */
 export namespace Errors {
