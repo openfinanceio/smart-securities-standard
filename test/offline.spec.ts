@@ -5,29 +5,15 @@ import { BigNumber } from "bignumber.js";
 import { randomBytes } from "crypto";
 import * as Web3 from "web3";
 
-import { getRoles } from "./Support";
+import { getSecurity, getRoles } from "./Support";
 import * as S3 from "../src";
 import * as U from "../src/Util";
 import { txReceipt } from "../src/Web3";
 
 const web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
 const roles = getRoles(web3);
+const security = getSecurity(roles);
 const chainId = parseInt(web3.version.network);
-
-const security = {
-  metadata: { name: "TestSecurity" },
-  investors: [
-    {
-      address: roles.investor1,
-      amount: new BigNumber(1e5)
-    },
-    {
-      address: roles.investor2,
-      amount: new BigNumber(1e7)
-    }
-  ],
-  admin: roles.securityOwner
-};
 
 // ~~~~~ //
 // TESTS //

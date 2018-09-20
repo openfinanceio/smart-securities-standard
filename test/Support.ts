@@ -20,6 +20,21 @@ export const getRoles = (web3: Web3) => {
   };
 };
 
+export const getSecurity = (roles: { [key: string]: string }) => ({
+  metadata: { name: "TestSecurity" },
+  investors: [
+    {
+      address: roles.investor1,
+      amount: new BigNumber(1e5)
+    },
+    {
+      address: roles.investor2,
+      amount: new BigNumber(1e7)
+    }
+  ],
+  admin: roles.securityOwner
+});
+
 export const assertSuccess = (receipt: TransactionReceipt) => {
   assert(
     receipt.status === "0x1" || // geth

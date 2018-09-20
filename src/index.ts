@@ -5,6 +5,7 @@ export {
   TransferRequest,
   handleTransfers
 } from "./Maintenance/Monitor";
+export { newResolver } from "./Maintenance/Resolver";
 export { BigNumber } from "bignumber.js";
 
 export {
