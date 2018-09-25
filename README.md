@@ -145,10 +145,21 @@ declare finalization: (txHash: string, extraData: A) => Promise<void>;
 Setting up S3 for development
 ==
 
-S3 can be set up like any `npm` package:  
+In order to develop S3, you'll need to have [`solc`][solc] on your path. Then S3 can be set up like this:  
 ```
 $ git clone https://github.com/OpenFinanceIO/smart-securities-standard.git
 $ cd smart-securities-standard
+$ git submodule init && git submodule update # get OpenZeppelin contracts
 $ npm install
-$ npm run cli -- --help
+$ npm run compile
+$ npm run cli -- --help # see cli options
 ```
+
+The tests expect to find [`ganache-cli`][ganache] listening at `localhost:8545`.  Once `ganache-cli` has been started:
+```
+$ # run the test cases
+$ npm test -- -t 30000
+```
+
+[solc]: https://github.com/ethereum/solidity
+[ganache]: https://github.com/trufflesuite/ganache-cli
