@@ -13,6 +13,7 @@
     "build-cli": "webpack",
     "cli": "scripts/cliHarness",
     "compile": "scripts/compile",
+    "install": "scripts/install",
     "make-docs": "typedoc --mode modules --out ./docs",
     "make-example": "ts-node run/generateExample.ts",
     "test": "tsc -p tsconfig.test.json && mocha dist/test/*.spec.js src/"
