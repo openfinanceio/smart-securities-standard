@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "build-cli": "webpack",
+    "build-cli": "tsc && webpack",
     "cli": "scripts/cliHarness",
     "compile": "scripts/compile",
     "install": "scripts/install",

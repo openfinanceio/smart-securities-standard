@@ -3,7 +3,6 @@
 import { BigNumber } from "bignumber.js";
 import * as program from "commander";
 import { existsSync, readFileSync, writeFileSync } from "fs";
-import * as _ from "lodash";
 import * as Web3 from "web3";
 import * as winston from "winston";
 
@@ -91,7 +90,14 @@ program
       );
       return web3.toWei(gasReport.safeLow, "gwei");
     };
-    const result = issueOnline(config, spec, securities, gasPrice, web3, log);
+    const result = await issueOnline(
+      config,
+      spec,
+      securities,
+      gasPrice,
+      web3,
+      log
+    );
     writeFileSync(env.output, JSON.stringify(result), "utf8");
   });
 
