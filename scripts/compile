@@ -1,11 +1,21 @@
 #! /bin/bash
 
+# Test for dependencies
+
+if ! command -v solc &>/dev/null; then
+  echo "Please install solc"
+  exit 1
+elif ! command -v jq &>/dev/null; then
+  echo "Please install jq"
+  exit 1
+fi
+
 # Compile contracts
 ls contracts/*.sol | xargs solc --optimize --abi --bin -o build --overwrite
 
 # Combine artifacts 
 for abiFile in build/*.abi; do 
-  fileRoot=$(echo -n $abiFile | head -c -4)
+  fileRoot=$(echo -n $abiFile | cut -d . -f 1)
   cat $abiFile | jq --arg bytecode "$(cat $fileRoot.bin)" \
     '{ abi: . } | .bytecode = "0x" + $bytecode' > $fileRoot.json
 done
