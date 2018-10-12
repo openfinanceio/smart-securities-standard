@@ -145,7 +145,14 @@ declare finalization: (txHash: string, extraData: A) => Promise<void>;
 Setting up S3 for development
 ==
 
-In order to develop S3, you'll need to have [`solc`][solc] on your path. Then S3 can be set up like this:  
+In order to develop S3, you'll need to have some programs installed:
+
+* [`solc`][solc] 
+* [`jq`][jq]
+* `typescript`, which can be installed with `npm install -g typescript` (or
+  through your system package manager)
+
+Then S3 can be set up like this:  
 ```
 $ git clone https://github.com/OpenFinanceIO/smart-securities-standard.git
 $ cd smart-securities-standard
@@ -163,3 +170,4 @@ $ npm test -- -t 30000
 
 [solc]: https://github.com/ethereum/solidity
 [ganache]: https://github.com/trufflesuite/ganache-cli
+[jq]: https://stedolan.github.io/jq/
