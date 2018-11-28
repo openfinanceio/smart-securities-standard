@@ -1,6 +1,11 @@
 export { init } from "./Init";
 export { issue } from "./Issue/Online";
-export { Transfer, TransferRequest, handleTransfers } from "./Monitor";
+export {
+  Transfer,
+  TransferRequest,
+  handleTransfers
+} from "./Maintenance/Monitor";
+export { newResolver } from "./Maintenance/Resolver";
 export { BigNumber } from "bignumber.js";
 
 export {

@@ -21,6 +21,9 @@ export const sigHashes = {
   },
   SimplifiedTokenLogic: {
     setFront: "ef82f95c",
+    setResolver: "4e543b26"
+  },
+  Ownable: {
     transferOwnership: "f2fde38b"
   }
 };

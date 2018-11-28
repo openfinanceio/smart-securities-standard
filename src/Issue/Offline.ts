@@ -150,6 +150,7 @@ export function logicAndInterface(
   const transactions: OfflineTranscript = [];
   const controllerAddress = U.privToAddress(ethParams.controller);
   let nonce = ethParams.startingNonce;
+  const chainId = ethParams.chainId;
   // Create simplified logic
   // ~~~~~~
   const simplifiedTokenLogicAddress = U.genAddress(controllerAddress, nonce);
@@ -167,7 +168,7 @@ export function logicAndInterface(
       gasPrice,
       gas: 1.5e6,
       nonce,
-      chainId: ethParams.chainId
+      chainId
     });
     newSimplifiedTokenLogic.sign(ethParams.controller);
     const result: [string, string] = [
@@ -204,7 +205,7 @@ export function logicAndInterface(
       gasPrice,
       gas: 1e6,
       nonce,
-      chainId: ethParams.chainId
+      chainId
     });
     newTokenFront.sign(ethParams.controller);
     const result: [string, string] = [
@@ -240,7 +241,7 @@ export function logicAndInterface(
       gas: 5e5,
       gasPrice,
       nonce,
-      chainId: ethParams.chainId
+      chainId
     });
     migrateCapTable.sign(ethParams.controller);
     const result: [string, string] = [
@@ -274,7 +275,7 @@ export function logicAndInterface(
       gas: 5e5,
       gasPrice,
       nonce,
-      chainId: ethParams.chainId
+      chainId
     });
     setFront.sign(ethParams.controller);
     const result: [string, string] = [
@@ -297,7 +298,7 @@ export function logicAndInterface(
   // Change the administrator
   // ~~~~~~
   const changeAdministratorData = U.hexSmash([
-    sigHashes.SimplifiedTokenLogic.transferOwnership,
+    sigHashes.Ownable.transferOwnership,
     U.padTo32(security.admin)
   ]);
   const changeAdministratorTxes = ethParams.gasPrices.map(gasPrice => {
@@ -308,7 +309,7 @@ export function logicAndInterface(
       gas: 1e5,
       gasPrice,
       nonce,
-      chainId: ethParams.chainId
+      chainId
     });
     changeAdministrator.sign(ethParams.controller);
     const result: [string, string] = [

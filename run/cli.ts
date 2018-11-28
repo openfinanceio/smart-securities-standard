@@ -6,13 +6,19 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import * as Web3 from "web3";
 import * as winston from "winston";
 
-import { BaseSecurity, IndexedSecurity } from "../src";
+import {
+  BaseSecurity,
+  IndexedSecurity,
+  OfflineTranscriptEntry,
+  newResolver
+} from "../src";
 import { txReceipt } from "../src/Web3";
 import { Config, GasReport, Spec, OfflineReport } from "./cli/Types";
 import { initS3 } from "./cli/Init";
 import { issueOnline } from "./cli/Online";
 import { offlineStage1, offlineStage2 } from "./cli/Offline";
 import { publishInteractive } from "./cli/Publish";
+import { gweiToWei } from "./cli/Util";
 
 // ~~~~~~~~~~~~~ //
 // CONFIGURATION //
@@ -31,6 +37,7 @@ const defaultConfig = `${PWD}/S3-conf.json`;
 const defaultSpec = `${PWD}/S3-spec.json`;
 const defaultReport = `${PWD}/S3-report.json`;
 const defaultInit = `${PWD}/S3-CapTables.json`;
+const defaultNewResolver = `${PWD}/S3-newResolver.json`;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 // INITIALIZE S3 WITH A CAP TABLE //
@@ -193,12 +200,12 @@ program
     }
   });
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
-// PUBLISH TXS GENERATED IN OFFLINE MODE //
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+// PUBLISH TXS GENERATED IN OFFLINE ISSUANCE MODE //
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
 program
-  .command("publish")
+  .command("publish-issuance")
   .option("-c, --config [file]", "path the configuration file", defaultConfig)
   .option("-r, --report [file]", "path to the report", defaultReport)
   .option("-s, --stage <stage>", "the stage of issuance", parseInt)
@@ -236,6 +243,69 @@ program
       }
     } catch (err) {
       log.error("Oops; problem!");
+      log.error(err);
+    }
+  });
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+// CHANGE THE RESOLVER ON A SIMPLIFIEDTOKENLOGIC INSTANCE //
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+
+// TODO Trezor support
+program
+  .command("newResolver")
+  .option(
+    "-s, --simplifiedTokenLogic <address>",
+    "the address of the simplified token logic to change"
+  )
+  .option(
+    "-a, --admin <privkey>",
+    "the base64 encoded private key in control of the token logic"
+  )
+  .option("-g, --gasPrice [gasPrice]", "the starting gas price in gwei", 5)
+  .option("-c, --chainId [chain]", "which chain to use", 4)
+  .option("-n, --nonce <value>", "the current nonce")
+  .option(
+    "-o, --outputFile [file]",
+    "where to write the transcript",
+    defaultNewResolver
+  )
+  .action(async env => {
+    const admin = Buffer.from(env.admin);
+    const gasPrices = _.range(env.gasPrice, 10 * env.gasPrice, 2);
+    const result = newResolver(env.simplifiedTokenLogic, admin, {
+      gasPrices: gasPrices.map(gweiToWei),
+      nonce: parseInt(env.nonce),
+      chainId: parseInt(env.chainId)
+    });
+    console.log("New resolver address:", result.resolverAddress);
+    console.log("New resolver key:", result.resolverKey.toString("base64"));
+    writeFileSync(env.outputFile, JSON.stringify(result.transcript), "utf8");
+  });
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+// PUBLISH NEW RESOLVER TRANSACTION //
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+
+program
+  .command("publish-new-resolver")
+  .option("-c, --config [file]", "configuration file", defaultConfig)
+  .option("-t, --transcript [file]", "transcript file", defaultNewResolver)
+  .action(async env => {
+    try {
+      const config: Config = JSON.parse(readFileSync(env.config, "utf8"));
+      const web3 = new Web3(
+        new Web3.providers.HttpProvider(
+          `http://${config.net.host}:${config.net.port}`
+        )
+      );
+      const entry: OfflineTranscriptEntry = JSON.parse(
+        readFileSync(env.trascript, "utf8")
+      );
+      await publishInteractive(entry, web3, log);
+      log.info("done");
+    } catch (err) {
+      log.error("Oh no!");
       log.error(err);
     }
   });
