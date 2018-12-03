@@ -3,6 +3,7 @@
 import { BigNumber } from "bignumber.js";
 import * as program from "commander";
 import { existsSync, readFileSync, writeFileSync } from "fs";
+import * as _ from "lodash";
 import * as Web3 from "web3";
 import * as winston from "winston";
 
