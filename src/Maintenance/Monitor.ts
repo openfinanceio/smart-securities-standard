@@ -12,6 +12,7 @@ export interface Transfer {
 }
 
 export type TransferRequest = Transfer & { index: BigNumber };
+export type FullTransferRequest = TransferRequest & { status: TransferStatus };
 
 export enum TransferStatus {
   Unused = 0,
@@ -61,3 +62,55 @@ export async function handleTransfers<A>(
   }
   return workingIndex;
 }
+
+/**
+ * Unpack a transfer request.
+ */
+export const getTransferRequest = (token: any, index: BigNumber) => {
+  const [
+    src,
+    dest,
+    amount,
+    spender,
+    transferStatus
+  ] = token.transferRequest.call(index);
+  return {
+    index,
+    src,
+    dest,
+    amount,
+    spender,
+    status: transferStatus.toNumber()
+  };
+};
+
+/**
+ * Fetch the active transfer requests where the stopping condition is that we
+ * encounter a (configurable) long sequence of unused positions.
+ */
+export const activeRequests = (token: any, gapSize: number, start: number) => {
+  const active: number[] = [];
+  let gap = 0;
+  let cursor = start;
+
+  while (gap <= gapSize) {
+    const req = getTransferRequest(token, cursor);
+    switch (req.status) {
+      case TransferStatus.Unused:
+        gap++;
+        cursor++;
+        break;
+      case TransferStatus.Active:
+        active.push(req);
+        gap = 0;
+        cursor++;
+        break;
+      case TransferStatus.Resolved:
+        gap = 0;
+        cursor++;
+        break;
+    }
+  }
+
+  return active;
+};
