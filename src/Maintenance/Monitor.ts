@@ -66,7 +66,7 @@ export async function handleTransfers<A>(
 /**
  * Unpack a transfer request.
  */
-export const getTransferRequest = (token: any, index: BigNumber) => {
+export const getTransferRequest = (token: any, index: number) => {
   const [
     src,
     dest,
@@ -74,24 +74,32 @@ export const getTransferRequest = (token: any, index: BigNumber) => {
     spender,
     transferStatus
   ] = token.transferRequest.call(index);
-  return {
-    index,
+  const result: FullTransferRequest = {
+    index: new BigNumber(index),
     src,
     dest,
     amount,
     spender,
     status: transferStatus.toNumber()
   };
+  return result;
 };
 
 /**
  * Fetch the active transfer requests where the stopping condition is that we
  * encounter a (configurable) long sequence of unused positions.
  */
-export const activeRequests = (token: any, gapSize: number, start: number) => {
-  const active: number[] = [];
+export const activeRequests = (
+  tokenAddress: string,
+  gapSize: number,
+  start: number,
+  web3: Web3
+) => {
+  const active: TransferRequest[] = [];
   let gap = 0;
   let cursor = start;
+
+  const token = web3.eth.contract(SimplifiedTokenLogic.abi).at(tokenAddress);
 
   while (gap <= gapSize) {
     const req = getTransferRequest(token, cursor);

@@ -4,7 +4,7 @@
 import { BigNumber } from "bignumber.js";
 import EthereumTx = require("ethereumjs-tx");
 
-import { SimplifiedTokenLogic, TokenFront, sigHashes } from "../Contracts";
+import { Data } from "../Contracts";
 import {
   BaseSecurity,
   OfflineTranscript,
@@ -29,11 +29,7 @@ export function initialize(
 ): [number, OfflineTranscriptEntry] {
   const supply = U.totalSupply(security);
   const controllerAddress = U.privToAddress(ethParams.controller);
-  const data = U.hexSmash([
-    sigHashes.CapTables.initialize,
-    U.toUInt256(supply),
-    U.padTo32(controllerAddress)
-  ]);
+  const data = Data.initializeCapTable(supply, controllerAddress);
   const signedTxes: Array<[string, string]> = ethParams.gasPrices.map(
     gasPrice => {
       const newCapTable = new EthereumTx({
@@ -88,13 +84,12 @@ export function configure(
   const controllerAddress = U.privToAddress(ethParams.controller);
   let nonce = ethParams.startingNonce;
   const transcript = security.investors.map(investor => {
-    const data = U.hexSmash([
-      sigHashes.CapTables.transfer,
-      U.toUInt256(securityId),
-      U.padTo32(controllerAddress),
-      U.padTo32(investor.address),
-      U.toUInt256(investor.amount)
-    ]);
+    const data = Data.capTablesTransfer(
+      securityId,
+      controllerAddress,
+      investor.address,
+      investor.amount
+    );
     const signedTxes = ethParams.gasPrices.map(gasPrice => {
       const setupInvestor = new EthereumTx({
         data,
@@ -154,13 +149,12 @@ export function logicAndInterface(
   // Create simplified logic
   // ~~~~~~
   const simplifiedTokenLogicAddress = U.genAddress(controllerAddress, nonce);
-  const simplifiedTokenLogicData = U.hexSmash([
-    SimplifiedTokenLogic.bytecode,
-    U.toUInt256(securityId),
-    U.padTo32(ethParams.capTablesAddress),
-    U.padTo32(controllerAddress),
-    U.padTo32(ethParams.resolverAddress)
-  ]);
+  const simplifiedTokenLogicData = Data.newSimplifiedLogic(
+    securityId,
+    ethParams.capTablesAddress,
+    controllerAddress,
+    ethParams.resolverAddress
+  );
   const newSimplifiedLogicTxes = ethParams.gasPrices.map(gasPrice => {
     const newSimplifiedTokenLogic = new EthereumTx({
       data: simplifiedTokenLogicData,
@@ -193,11 +187,10 @@ export function logicAndInterface(
   // Deploy the token front
   // ~~~~~~
   const tokenFrontAddress = U.genAddress(controllerAddress, nonce);
-  const newTokenFrontData = U.hexSmash([
-    TokenFront.bytecode,
-    U.padTo32(simplifiedTokenLogicAddress),
-    U.padTo32(security.admin)
-  ]);
+  const newTokenFrontData = Data.newTokenFront(
+    simplifiedTokenLogicAddress,
+    security.admin
+  );
   const newTokenFrontTxes = ethParams.gasPrices.map(gasPrice => {
     const newTokenFront = new EthereumTx({
       data: newTokenFrontData,
@@ -228,11 +221,10 @@ export function logicAndInterface(
   nonce++;
   // Migrate the cap table
   // ~~~~~~~
-  const migrateCapTableData = U.hexSmash([
-    sigHashes.CapTables.migrate,
-    U.toUInt256(securityId),
-    U.padTo32(simplifiedTokenLogicAddress)
-  ]);
+  const migrateCapTableData = Data.capTablesMigrate(
+    securityId,
+    simplifiedTokenLogicAddress
+  );
   const migrateCapTableTxes = ethParams.gasPrices.map(gasPrice => {
     const migrateCapTable = new EthereumTx({
       data: migrateCapTableData,
@@ -263,10 +255,7 @@ export function logicAndInterface(
   nonce++;
   // Set the token front
   // ~~~~~~
-  const setFrontData = U.hexSmash([
-    sigHashes.SimplifiedTokenLogic.setFront,
-    U.padTo32(tokenFrontAddress)
-  ]);
+  const setFrontData = Data.setFront(tokenFrontAddress);
   const setFrontTxes = ethParams.gasPrices.map(gasPrice => {
     const setFront = new EthereumTx({
       from: controllerAddress,
@@ -297,10 +286,9 @@ export function logicAndInterface(
   nonce++;
   // Change the administrator
   // ~~~~~~
-  const changeAdministratorData = U.hexSmash([
-    sigHashes.Ownable.transferOwnership,
-    U.padTo32(security.admin)
-  ]);
+  const changeAdministratorData = Data.simplifiedLogicChangeAdmin(
+    security.admin
+  );
   const changeAdministratorTxes = ethParams.gasPrices.map(gasPrice => {
     const changeAdministrator = new EthereumTx({
       from: controllerAddress,

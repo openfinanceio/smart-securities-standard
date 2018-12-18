@@ -3,6 +3,9 @@ export { issue } from "./Issue/Online";
 export {
   Transfer,
   TransferRequest,
+  TransferStatus,
+  activeRequests,
+  getTransferRequest,
   handleTransfers
 } from "./Maintenance/Monitor";
 export { newResolver } from "./Maintenance/Resolver";
@@ -11,6 +14,7 @@ export { BigNumber } from "bignumber.js";
 export {
   Artifact,
   CapTables,
+  Data,
   SimplifiedTokenLogic,
   TokenFront
 } from "./Contracts";
