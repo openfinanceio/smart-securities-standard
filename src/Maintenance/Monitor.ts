@@ -73,7 +73,7 @@ export const getTransferRequest = (token: any, index: number) => {
     amount,
     spender,
     transferStatus
-  ] = token.transferRequest.call(index);
+  ] = token.transferRequests.call(index);
   const result: FullTransferRequest = {
     index: new BigNumber(index),
     src,
