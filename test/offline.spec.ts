@@ -15,6 +15,14 @@ const roles = getRoles(web3);
 const security = getSecurity(roles);
 const chainId = parseInt(web3.version.network);
 
+const mkTicker = () => {
+  let i = 0;
+  return () => {
+    console.log("TICK", i);
+    i++;
+  };
+};
+
 // ~~~~~ //
 // TESTS //
 // ~~~~~ //
@@ -22,10 +30,12 @@ const chainId = parseInt(web3.version.network);
 describe("offline deployment", () => {
   it("should initialize the cap table", async () => {
     const [capTables] = await S3.init(roles.controller, "0", web3.eth);
+
     const [
       ephemeralController,
       ephemeralControllerAddress
     ] = await fundedController(roles.controller);
+
     // First security
     {
       const [newNonce, entry] = S3.issueOffline.initialize(security, {
@@ -42,6 +52,7 @@ describe("offline deployment", () => {
       const securityId = await getSecurityId(hash);
       assert.equal(securityId.toNumber(), 0, "correct SID");
     }
+
     // Second security
     {
       const [, entry] = S3.issueOffline.initialize(security, {
@@ -57,12 +68,15 @@ describe("offline deployment", () => {
       assert.equal(securityId.toNumber(), 1, "correct SID");
     }
   });
+
   it("should configure the cap table", async () => {
     const [capTable] = await S3.init(roles.controller, "0", web3.eth);
+
     const [
       ephemeralController,
       ephemeralControllerAddress
     ] = await fundedController(roles.controller);
+
     const [newNonce, entry] = S3.issueOffline.initialize(security, {
       capTablesAddress: capTable,
       controller: ephemeralController,
@@ -70,8 +84,10 @@ describe("offline deployment", () => {
       gasPrices: ["0"],
       chainId
     });
+
     const hash = web3.eth.sendRawTransaction(entry.signedTxes[0][1]);
     const securityId = await getSecurityId(hash);
+
     const [, entries] = S3.issueOffline.configure(security, securityId, {
       capTablesAddress: capTable,
       controller: ephemeralController,
@@ -79,24 +95,32 @@ describe("offline deployment", () => {
       gasPrices: ["0"],
       chainId
     });
+
     assert.equal(entries.length, 2, "should distribute to two investors");
+
     for (let entry of entries) {
       const hash = web3.eth.sendRawTransaction(entry.signedTxes[0][1]);
-      await txReceipt(web3.eth, hash);
+      const receipt = await txReceipt(web3.eth, hash);
+      assert.equal(receipt.status, "0x1", "transaction should succeed");
     }
+
     const capTablesInstance = web3.eth.contract(S3.CapTables.abi).at(capTable);
+
     security.investors.forEach(({ address, amount }) => {
       // Check the balance
       const bal = capTablesInstance.balanceOf.call(securityId, address);
       assert(bal.equals(amount), "balance should be correct");
     });
   });
+
   it("should set up SimplifiedTokenLogic and TokenFront", async () => {
     const [capTable] = await S3.init(roles.controller, "0", web3.eth);
+
     const [
       ephemeralController,
       ephemeralControllerAddress
     ] = await fundedController(roles.controller);
+
     const [newNonce, entry] = S3.issueOffline.initialize(security, {
       capTablesAddress: capTable,
       controller: ephemeralController,
@@ -104,8 +128,10 @@ describe("offline deployment", () => {
       gasPrices: ["0"],
       chainId
     });
+
     const hash = web3.eth.sendRawTransaction(entry.signedTxes[0][1]);
     const securityId = await getSecurityId(hash);
+
     const [nextNonce, entries] = S3.issueOffline.configure(
       security,
       securityId,
@@ -117,10 +143,12 @@ describe("offline deployment", () => {
         chainId
       }
     );
+
     for (let entry of entries) {
       const hash = web3.eth.sendRawTransaction(entry.signedTxes[0][1]);
       await txReceipt(web3.eth, hash);
     }
+
     const [, nextEntries] = S3.issueOffline.logicAndInterface(
       security,
       securityId,
@@ -133,16 +161,20 @@ describe("offline deployment", () => {
         chainId
       }
     );
+
     // 1. deploy SimplifedTokenLogic
     // 2. deploy TokenFront
     // 3. migrate the cap table
     // 4. set the front
     // 5. set the administrator
     assert.equal(nextEntries.length, 5, "should publish 5 transactions");
+
     for (let entry of nextEntries) {
       const hash = web3.eth.sendRawTransaction(entry.signedTxes[0][1]);
-      await txReceipt(web3.eth, hash);
+      const receipt = await txReceipt(web3.eth, hash);
+      assert.equal(receipt.status, "0x1", "transaction should succeed");
     }
+
     const [
       {
         params: { simplifiedTokenLogicAddress }
@@ -151,12 +183,15 @@ describe("offline deployment", () => {
         params: { tokenFrontAddress }
       }
     ] = nextEntries;
+
     const tokenFront = web3.eth
       .contract(S3.TokenFront.abi)
       .at(<string>tokenFrontAddress);
+
     const simplifiedTokenLogic = web3.eth
       .contract(S3.SimplifiedTokenLogic.abi)
       .at(<string>simplifiedTokenLogicAddress);
+
     // Observed values //
     // SimplifiedTokenLogic
     // front
@@ -164,32 +199,38 @@ describe("offline deployment", () => {
       const observed = simplifiedTokenLogic.front.call();
       assert.equal(observed, tokenFrontAddress, "observed front should match");
     }
+
     // capTables
     {
       const observed = simplifiedTokenLogic.capTables.call();
       assert.equal(observed, capTable, "observed cap tables should match");
     }
+
     // resolver
     {
       const observed = simplifiedTokenLogic.resolver.call();
       assert.equal(observed, roles.resolver, "resolver");
     }
+
     // owner
     {
       const observed = simplifiedTokenLogic.owner.call();
       assert.equal(observed, roles.securityOwner, "SimplifiedTokenLogic owner");
     }
+
     // TokenFront
     // logic
     {
       const observed = tokenFront.tokenLogic.call();
       assert.equal(observed, simplifiedTokenLogicAddress, "tokenLogic");
     }
+
     // owner
     {
       const observed = tokenFront.owner.call();
       assert.equal(observed, roles.securityOwner, "TokenFront owner");
     }
+
     // balances
     security.investors.forEach(investor => {
       const bal = tokenFront.balanceOf.call(investor.address);
