@@ -20,7 +20,9 @@ export {
 } from "./Contracts";
 export {
   BaseSecurity,
+  baseSecurityRT,
   IndexedSecurity,
+  indexedSecurityRT,
   OfflineTranscriptEntry,
   OfflineTranscript,
   Transcript

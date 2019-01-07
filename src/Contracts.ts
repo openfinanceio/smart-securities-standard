@@ -46,7 +46,7 @@ export namespace Data {
     id: BigNumber,
     src: string,
     dst: string,
-    amount: BigNumber
+    amount: string
   ) =>
     U.hexSmash([
       sigHashes.CapTables.transfer,

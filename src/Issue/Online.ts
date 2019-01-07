@@ -100,7 +100,7 @@ export async function initCapTable(
   kit.log.debug("Initial distribution");
   await Promise.all(
     security.investors.map(
-      async (investor: { address: Address; amount: BigNumber }) => {
+      async (investor: { address: Address; amount: string }) => {
         const description = `Distributing ${investor.amount.toString()} to ${
           investor.address
         }`;

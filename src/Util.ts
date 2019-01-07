@@ -8,7 +8,7 @@ import {
 import { BaseSecurity } from "./Types";
 
 export function totalSupply(security: BaseSecurity) {
-  const step = (supply: BigNumber, shares: { amount: BigNumber }) =>
+  const step = (supply: BigNumber, shares: { amount: string }) =>
     supply.plus(shares.amount);
   return security.investors.reduce(step, new BigNumber(0));
 }

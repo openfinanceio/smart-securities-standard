@@ -1,4 +1,5 @@
 import { BigNumber } from "bignumber.js";
+import * as iots from "io-ts";
 
 /** 20 byte hex-encoded key hash prefixed with "0x" */
 export type Address = string;
@@ -6,14 +7,27 @@ export type Address = string;
 /** Securities in S3 are defined by an integer key */
 export type SecurityId = BigNumber;
 
-export interface BaseSecurity {
-  admin: Address;
-  investors: { address: Address; amount: BigNumber }[];
-  metadata: {
-    name: string;
-    [prop: string]: unknown;
-  };
-}
+export const baseSecurityRT = iots.type({
+  admin: iots.string,
+  resolver: iots.string,
+  investors: iots.array(
+    iots.type({
+      address: iots.string,
+      amount: iots.string
+    })
+  ),
+  metadata: iots.type({
+    name: iots.string,
+    symbol: iots.string
+  })
+});
+
+export type BaseSecurity = iots.TypeOf<typeof baseSecurityRT>;
+
+export const indexedSecurityRT = iots.intersection([
+  baseSecurityRT,
+  iots.type({ securityId: iots.number })
+]);
 
 export interface IndexedSecurity extends BaseSecurity {
   securityId: number;

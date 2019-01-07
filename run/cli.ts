@@ -11,10 +11,13 @@ import {
   BaseSecurity,
   IndexedSecurity,
   OfflineTranscriptEntry,
-  newResolver
+  newResolver,
+  baseSecurityRT,
+  indexedSecurityRT
 } from "../src";
 import { txReceipt } from "../src/Web3";
-import { Config, GasReport, Spec, OfflineReport } from "./cli/Types";
+
+import { Config, GasReport, OfflineReport, specRT } from "./cli/Types";
 import { initS3 } from "./cli/Init";
 import { issueOnline } from "./cli/Online";
 import { offlineStage1, offlineStage2 } from "./cli/Offline";
@@ -54,9 +57,12 @@ program
   )
   .action(async env => {
     checkOutput(env.output);
+
     const config: Config = JSON.parse(readFileSync(env.config, "utf8"));
     const result = await initS3(config);
+
     log.info(`CapTables instance @ ${result.capTables}`);
+
     writeFileSync(env.output, JSON.stringify(result.transcript), "utf8");
   });
 
@@ -79,18 +85,35 @@ program
   )
   .action(async env => {
     checkOutput(env.output);
+
     // Let's read in the configuration
     const config: Config = JSON.parse(readFileSync(env.config, "utf8"));
+
     // ... and the program that we're supposed to execute
-    const spec: Spec = JSON.parse(readFileSync(env.declaration, "utf8"));
-    const securities: Array<BaseSecurity> = spec.securityPaths.map(path =>
-      JSON.parse(readFileSync(path, "utf8"))
+    const spec = specRT
+      .decode(JSON.parse(readFileSync(env.declaration, "utf8")))
+      .getOrElseL(errs => {
+        throw new Error("Invalid spec.");
+      });
+
+    const securities: Array<BaseSecurity> = [];
+    spec.securityPaths.forEach(path =>
+      baseSecurityRT.decode(JSON.parse(readFileSync(path, "utf8"))).fold(
+        errs => {
+          log.warning(`${path} contains an invalid spec`);
+        },
+        security => {
+          securities.push(security);
+        }
+      )
     );
+
     const web3 = new Web3(
       new Web3.providers.HttpProvider(
         `http://${config.net.host}:${config.net.port}`
       )
     );
+
     // We'll need to figure out gas prices
     const gasPrice = () => {
       const gasReport: GasReport = JSON.parse(
@@ -98,6 +121,7 @@ program
       );
       return web3.toWei(gasReport.safeLow, "gwei");
     };
+
     const result = await issueOnline(
       config,
       spec,
@@ -106,6 +130,7 @@ program
       web3,
       log
     );
+
     writeFileSync(env.output, JSON.stringify(result), "utf8");
   });
 
@@ -135,21 +160,37 @@ program
   .option("-g, --gasPrice <gasPrice>", "starting gas price", parseInt, 5)
   .action(env => {
     const outputFile = env.output;
+
     // We will never overwrite the output file
     if (env.stage === 1) {
       checkOutput(outputFile);
     }
+
     try {
-      const spec: Spec = JSON.parse(readFileSync(env.declaration, "utf8"));
+      const spec = specRT
+        .decode(JSON.parse(readFileSync(env.declaration, "utf8")))
+        .getOrElseL(errs => {
+          throw new Error("Invalid specification");
+        });
+
       const gasPrice = env.gasPrice;
-      if (spec.capTables === null) {
-        log.error("CapTables address must be set");
-        process.exitCode = 1;
-      } else if (env.stage === 1) {
-        log.debug("Stage 1");
-        const securities: Array<BaseSecurity> = spec.securityPaths.map(path =>
-          JSON.parse(readFileSync(path, "utf8"))
+
+      if (env.stage === 1) {
+        log.info("Stage 1");
+
+        const securities: Array<BaseSecurity> = [];
+        spec.securityPaths.forEach(path =>
+          baseSecurityRT.decode(JSON.parse(readFileSync(path, "utf8"))).fold(
+            errs => {
+              log.warning(`${path} contains an invalid spec`);
+            },
+            security => {
+              // Add the security to the list of specs to process
+              securities.push(security);
+            }
+          )
         );
+
         const [nonce, stage1] = offlineStage1(
           securities,
           {
@@ -159,18 +200,31 @@ program
           },
           log
         );
+
         log.debug(`writing ${outputFile}`);
+
         writeFileSync(outputFile, JSON.stringify({ nonce, stage1 }), "utf8");
-      } else if (env.stage === 2 && spec.resolver !== null) {
-        log.debug("Stage 2");
-        const securities: Array<IndexedSecurity> = spec.securityPaths.map(
-          path => JSON.parse(readFileSync(path, "utf8"))
+      } else if (env.stage === 2) {
+        log.info("Stage 2");
+
+        const securities: Array<IndexedSecurity> = [];
+        spec.securityPaths.forEach(path =>
+          indexedSecurityRT.decode(JSON.parse(readFileSync(path, "utf8"))).fold(
+            errs => {
+              log.warning(`${path} contains an invalid spec`);
+            },
+            security => {
+              securities.push(security);
+            }
+          )
         );
+
         // We need to read the controller from stdin
         const controller = Buffer.from(
           process.env.controller as string,
           "base64"
         );
+
         const { nonce, stage1 } = JSON.parse(readFileSync(outputFile, "utf8"));
         const stage2 = offlineStage2(
           securities,
@@ -184,6 +238,7 @@ program
           },
           log
         );
+
         writeFileSync(
           outputFile,
           JSON.stringify({
@@ -193,7 +248,7 @@ program
           "utf8"
         );
       } else {
-        log.debug("Unable to proceed");
+        log.warning("The only valid stages are '1' & '2'");
       }
     } catch (err) {
       log.error("There was a problem:");
@@ -213,28 +268,35 @@ program
   .action(async env => {
     try {
       const config: Config = JSON.parse(readFileSync(env.config, "utf8"));
+
       const web3 = new Web3(
         new Web3.providers.HttpProvider(
           `http://${config.net.host}:${config.net.port}`
         )
       );
+
       const report: OfflineReport = JSON.parse(
         readFileSync(env.report, "utf8")
       );
+
       if (env.stage === 1) {
         for (let [securityName, transaction] of report.stage1) {
           log.info(`Initializing ${securityName}`);
+
           const hash = await publishInteractive(transaction, web3, log);
           const rec = await txReceipt(web3.eth, hash);
+
           const securityId = new BigNumber(
             rec.logs[0].data.slice(2),
             16
           ).toString();
+
           log.info(`securityId = ${securityId}`);
         }
       } else if (env.stage === 2) {
         for (let [securityName, transactions] of report.stage2) {
           log.info(`Finishing ${securityName}`);
+
           for (let transaction of transactions) {
             await publishInteractive(transaction, web3, log);
           }
@@ -273,14 +335,18 @@ program
   )
   .action(async env => {
     const admin = Buffer.from(env.admin);
+
     const gasPrices = _.range(env.gasPrice, 10 * env.gasPrice, 2);
+
     const result = newResolver(env.simplifiedTokenLogic, admin, {
       gasPrices: gasPrices.map(gweiToWei),
       nonce: parseInt(env.nonce),
       chainId: parseInt(env.chainId)
     });
+
     console.log("New resolver address:", result.resolverAddress);
     console.log("New resolver key:", result.resolverKey.toString("base64"));
+
     writeFileSync(env.outputFile, JSON.stringify(result.transcript), "utf8");
   });
 
@@ -295,15 +361,19 @@ program
   .action(async env => {
     try {
       const config: Config = JSON.parse(readFileSync(env.config, "utf8"));
+
       const web3 = new Web3(
         new Web3.providers.HttpProvider(
           `http://${config.net.host}:${config.net.port}`
         )
       );
+
       const entry: OfflineTranscriptEntry = JSON.parse(
         readFileSync(env.trascript, "utf8")
       );
+
       await publishInteractive(entry, web3, log);
+
       log.info("done");
     } catch (err) {
       log.error("Oh no!");

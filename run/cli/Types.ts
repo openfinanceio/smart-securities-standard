@@ -1,3 +1,5 @@
+import * as iots from "io-ts";
+
 import {
   Transcript,
   OfflineTranscript,
@@ -25,13 +27,19 @@ export interface Spec {
    * When null, deploy a new captables; otherwise this is the address of the
    * capTables contract to use.
    */
-  capTables: string | null;
+  capTables: string;
   /**
    * A designated address to resolve transfers
    */
-  resolver: string | null;
+  resolver: string;
   securityPaths: string[];
 }
+
+export const specRT: iots.Type<Spec> = iots.type({
+  capTables: iots.string,
+  resolver: iots.string,
+  securityPaths: iots.array(iots.string)
+});
 
 export interface S3 {
   name: string;

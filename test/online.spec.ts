@@ -39,11 +39,12 @@ const issue: () => Promise<Issued> = async () => {
   const [capTables] = await init();
   const security = {
     investors: [
-      { address: roles.investor1, amount: new BigNumber(1e5) },
-      { address: roles.investor2, amount: new BigNumber(2e4) }
+      { address: roles.investor1, amount: "100000" },
+      { address: roles.investor2, amount: "20000" }
     ],
-    metadata: { name: "TheSecurity" },
-    admin: owner
+    metadata: { name: "TheSecurity", symbol: "SCRT" },
+    admin: owner,
+    resolver: roles.resolver
   };
   const [{ front, middleware }] = await S3.issue(
     security,
@@ -92,12 +93,19 @@ const transfer = async ({
     decision,
     finalization
   );
+
   assert(nextTxfrIndex.equals(1), "next transfer index");
   assert(finalized, "finalized");
+
   const bal1 = tokenFront.balanceOf.call(roles.investor1);
-  assert(bal1.equals(security.investors[0].amount.sub(1e2)), "token balance 1");
+  assert(
+    bal1.plus(1e2).equals(security.investors[0].amount),
+    "token balance 1"
+  );
+
   const bal2 = tokenFront.balanceOf.call(roles.investor2);
   assert(bal2.equals(security.investors[1].amount), "token balance 2");
+
   const bal3 = tokenFront.balanceOf.call(roles.investor3);
   assert(bal3.equals(1e2), "token balance 3");
 };
@@ -192,12 +200,19 @@ const multiple = async ({
     finalization
   );
   assert(nextTxfrIndex.equals(3), "next index");
+
   // Check the balances
   console.log("Checking balances");
+
   const bal1 = tokenFront.balanceOf.call(roles.investor1);
-  assert(bal1.equals(security.investors[0].amount.sub(1e2)), "token balance 1");
+  assert(
+    bal1.plus(1e2).equals(security.investors[0].amount),
+    "token balance 1"
+  );
+
   const bal2 = tokenFront.balanceOf.call(roles.investor2);
-  assert(bal2.equals(security.investors[1].amount.plus(15)), "token balance 2");
+  assert(bal2.sub(15).equals(security.investors[1].amount), "token balance 2");
+
   const bal3 = tokenFront.balanceOf.call(roles.investor3);
   assert(bal3.equals(85), "token balance 3");
 };
