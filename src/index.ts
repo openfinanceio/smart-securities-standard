@@ -1,13 +1,6 @@
 export { init } from "./Init";
 export { issue } from "./Issue/Online";
-export {
-  Transfer,
-  TransferRequest,
-  TransferStatus,
-  activeRequests,
-  getTransferRequest,
-  handleTransfers
-} from "./Maintenance/Monitor";
+export * from "./Maintenance/Monitor";
 export { newResolver } from "./Maintenance/Resolver";
 export { BigNumber } from "bignumber.js";
 
@@ -18,15 +11,7 @@ export {
   SimplifiedTokenLogic,
   TokenFront
 } from "./Contracts";
-export {
-  BaseSecurity,
-  baseSecurityRT,
-  IndexedSecurity,
-  indexedSecurityRT,
-  OfflineTranscriptEntry,
-  OfflineTranscript,
-  Transcript
-} from "./Types";
+export * from "./Types";
 
 import * as offline from "./Issue/Offline";
 

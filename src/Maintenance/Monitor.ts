@@ -1,24 +1,14 @@
 import { SimplifiedTokenLogic } from "../Contracts";
-import { Address } from "../Types";
+import {
+  Address,
+  Transfer,
+  TransferRequest,
+  FullTransferRequest,
+  TransferStatus
+} from "../Types";
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
 import { success, txReceipt } from "../Web3";
-
-export interface Transfer {
-  src: Address;
-  dest: Address;
-  amount: BigNumber;
-  spender: Address;
-}
-
-export type TransferRequest = Transfer & { index: BigNumber };
-export type FullTransferRequest = TransferRequest & { status: TransferStatus };
-
-export enum TransferStatus {
-  Unused = 0,
-  Active,
-  Resolved
-}
 
 /**
  * This function processes the longest consecutive sequence of active

@@ -69,3 +69,23 @@ export namespace Errors {
     Accreditation
   }
 }
+
+// ~~~~~~~~~~~~~~~~~ //
+// Transfer requests //
+// ~~~~~~~~~~~~~~~~~ //
+
+export interface Transfer {
+  src: Address;
+  dest: Address;
+  amount: BigNumber;
+  spender: Address;
+}
+
+export type TransferRequest = Transfer & { index: BigNumber };
+export type FullTransferRequest = TransferRequest & { status: TransferStatus };
+
+export enum TransferStatus {
+  Unused = 0,
+  Active,
+  Resolved
+}
