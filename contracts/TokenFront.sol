@@ -15,8 +15,8 @@ contract TokenFront is ERC20, Ownable {
     DelegatedERC20 public tokenLogic;
     
     constructor(DelegatedERC20 _tokenLogic, address _owner) public {
-        owner = _owner;
         tokenLogic = _tokenLogic; 
+        _transferOwnership(_owner);
     }
 
     function migrate(DelegatedERC20 newTokenLogic) public onlyOwner {

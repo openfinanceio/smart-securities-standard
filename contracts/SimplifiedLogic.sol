@@ -90,8 +90,8 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
     ) public {
         index = _index;
         capTables = _capTables;
-        owner = _owner;
         resolver = _resolver;
+        _transferOwnership(_owner);
     }
 
     function transfer(address _dest, uint256 _amount, address _sender) 
@@ -178,7 +178,7 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
         public
         onlyOwner
     {
-        ICapTables(capTables).transfer(_index, src, dst, amount);
+        ICapTables(capTables).transfer(index, src, dst, amount);
     }
 
     function migrate(address newLogic) public onlyOwner {
