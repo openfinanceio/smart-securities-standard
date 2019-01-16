@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 interface ICapTables {
     function balanceOf(uint256 token, address user) external view returns (uint256);

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import { DelegatedTokenLogic } from "./DelegatedTokenLogic.sol";
 import { IndexConsumer } from "./IndexConsumer.sol";
@@ -7,7 +7,7 @@ import { ICapTables } from "./interfaces/ICapTables.sol";
 /**
  * One method for implementing a permissioned token is to appoint some
  * authority which must decide whether to approve or refuse trades.  This
- * contract implements this functionality.  
+ * contract implements this functionality as well as clawback.
  */
 contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
     
@@ -57,6 +57,13 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
     event TransferResult(
         uint256 indexed index,
         uint16 code
+    );
+
+    /** Signals an invokation of clawback functionality. */
+    event Clawback (
+        address indexed src,
+        address indexed dst,
+        uint256 amount
     );
         
     /** 
@@ -164,6 +171,14 @@ contract SimplifiedLogic is IndexConsumer, DelegatedTokenLogic {
         } 
         transferRequests[_txfrIndex].status = TransferStatus.Resolved;
         emit TransferResult(_txfrIndex, _code);
+    }
+
+    /** Force a transfer if needed. */
+    function clawback(address src, address dst, uint256 amount) 
+        public
+        onlyOwner
+    {
+        ICapTables(capTables).transfer(_index, src, dst, amount);
     }
 
     function migrate(address newLogic) public onlyOwner {
