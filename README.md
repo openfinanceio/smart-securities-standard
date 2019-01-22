@@ -1,6 +1,6 @@
 ---
-version: 0.3.0
-solidity: 0.4.24
+version: 0.4.0
+solidity: 0.5.0
 status: experimental
 ---
 
