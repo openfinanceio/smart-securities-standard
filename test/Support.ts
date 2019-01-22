@@ -21,7 +21,7 @@ export const getRoles = (web3: Web3) => {
 };
 
 export const getSecurity = (roles: { [key: string]: string }) => ({
-  metadata: { name: "TestSecurity", symbol: "TEST" },
+  metadata: { name: "TestSecurity", symbol: "TEST", decimals: 2 },
   investors: [
     {
       address: roles.investor1,

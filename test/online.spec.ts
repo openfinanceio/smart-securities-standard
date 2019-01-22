@@ -42,7 +42,7 @@ const issue: () => Promise<Issued> = async () => {
       { address: roles.investor1, amount: "100000" },
       { address: roles.investor2, amount: "20000" }
     ],
-    metadata: { name: "TheSecurity", symbol: "SCRT" },
+    metadata: { name: "TheSecurity", symbol: "SCRT", decimals: 1 },
     admin: owner,
     resolver: roles.resolver
   };
