@@ -28,7 +28,8 @@ contract Administer {
         Clawback,
         Migrate,
         NewAdmin,
-        NewLogic
+        NewLogic,
+        Rotate
     }
 
     struct MethodCall {
@@ -37,7 +38,10 @@ contract Administer {
         bool sigA;
         bool sigB;
         bool sigC;
+        bytes32 argHash;
     }
+
+    enum Signer { A, B, C }
 
 
     SimplifiedLogic targetLogic;
@@ -70,7 +74,7 @@ contract Administer {
      * - call slot must be available
      * - if the call is in progress the method must match
      */
-    function setup(uint256 _callNumber, Operation _op) internal {
+    function setup(uint256 _callNumber, Operation _op, bytes32 _argHash) internal {
         require(
             msg.sender == cosignerA || msg.sender == cosignerB || msg.sender == cosignerC,
             "method call restricted to cosigners"
@@ -84,10 +88,16 @@ contract Administer {
             "method status must be none or open"
         );
 
+        require(
+            _argHash == mc.argHash,
+            "same arguments must be passed"
+        );
+
         if (mc.status == CallStatus.None) {
 
             mc.status = CallStatus.Open;
             mc.op = _op;
+            mc.argHash = _argHash;
 
         } else {
             require(
@@ -131,7 +141,12 @@ contract Administer {
      */
     function setResolver(uint256 _callNumber, address _resolver) public {
 
-        setup(_callNumber, Operation.SetResolver);
+        setup(
+            _callNumber, 
+            Operation.SetResolver, 
+            keccak256(abi.encodePacked(_resolver))
+        );
+
         addSig(_callNumber);
 
         if (thresholdMet(_callNumber)) {
@@ -152,7 +167,12 @@ contract Administer {
         uint256 _amount
     ) public {
 
-        setup(_callNumber, Operation.Clawback);
+        setup(
+            _callNumber, 
+            Operation.Clawback, 
+            keccak256(abi.encodePacked(_src, _dst, _amount))
+        );
+
         addSig(_callNumber);
 
         if (thresholdMet(_callNumber)) {
@@ -168,7 +188,12 @@ contract Administer {
      */
     function migrate(uint256 _callNumber, address _newLogic) public {
 
-        setup(_callNumber, Operation.Migrate);
+        setup(
+            _callNumber, 
+            Operation.Migrate,
+            keccak256(abi.encodePacked(_newLogic))
+        );
+
         addSig(_callNumber);
 
         if (thresholdMet(_callNumber)) {
@@ -185,7 +210,12 @@ contract Administer {
      */
     function newAdmin(uint256 _callNumber, address _newOwner) public {
 
-        setup(_callNumber, Operation.NewAdmin);
+        setup(
+            _callNumber, 
+            Operation.NewAdmin,
+            keccak256(abi.encodePacked(_newOwner))
+        );
+
         addSig(_callNumber);
 
         if (thresholdMet(_callNumber)) {
@@ -203,7 +233,12 @@ contract Administer {
      */
     function newLogic(uint256 _callNumber, DelegatedERC20 _newLogic) public {
 
-        setup(_callNumber, Operation.NewLogic);
+        setup(
+            _callNumber, 
+            Operation.NewLogic,
+            keccak256(abi.encodePacked(_newLogic))
+        );
+
         addSig(_callNumber);
 
         if (thresholdMet(_callNumber)) {
@@ -212,6 +247,35 @@ contract Administer {
             complete(_callNumber);
 
         }
+
+    }
+
+    /**
+     * Change a signer
+     */
+    function rotate(uint256 _callNumber, Signer _s, address _newSigner) public {
+
+        setup(
+            _callNumber, 
+            Operation.Rotate,
+            keccak256(abi.encodePacked(_s, _newSigner))
+        );
+
+        addSig(_callNumber);
+
+        if (thresholdMet(_callNumber)) {
+
+            if (_s == Signer.A) {
+                cosignerA = _newSigner;
+            } else if (_s == Signer.B) {
+                cosignerB = _newSigner;
+            } else if (_s == Signer.C) {
+                cosignerC = _newSigner;
+            }
+            complete(_callNumber);
+
+        }
+
 
     }
 
