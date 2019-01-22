@@ -207,7 +207,10 @@ export function logicAndInterface(
   const tokenFrontAddress = U.genAddress(controllerAddress, nonce);
   const newTokenFrontData = Data.newTokenFront(
     simplifiedTokenLogicAddress,
-    security.admin
+    security.admin,
+    security.metadata.name,
+    security.metadata.symbol,
+    security.metadata.decimals
   );
 
   const newTokenFrontTxes = ethParams.gasPrices.map(gasPrice => {

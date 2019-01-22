@@ -45,7 +45,12 @@ export async function issue(
     kit
   );
   const [{ front, middleware }, transcript1] = await initToken(
-    securityId,
+    {
+      securityId,
+      name: security.metadata.name,
+      symbol: security.metadata.symbol,
+      decimals: security.metadata.decimals
+    },
     capTables,
     security.admin,
     controller,
@@ -139,7 +144,12 @@ export async function initCapTable(
 
 export async function initToken(
   this: void,
-  securityId: SecurityId,
+  metadata: {
+    securityId: SecurityId;
+    name: string;
+    symbol: string;
+    decimals: number;
+  },
   capTables: Address,
   admin: Address,
   controller: Address,
@@ -161,7 +171,7 @@ export async function initToken(
   const transcript: Transcript = [];
   const txSimplifiedLogic = kit.eth
     .contract(SimplifiedTokenLogic.abi)
-    .new(securityId, capTables, admin, controller, {
+    .new(metadata.securityId, capTables, admin, controller, {
       data: SimplifiedTokenLogic.bytecode,
       from: controller,
       gas: 1.5e6,
@@ -178,7 +188,7 @@ export async function initToken(
     hash: txSimplifiedLogic.transactionHash,
     gasUsed: recSimplifiedLogic.gasUsed,
     data: {
-      securityId,
+      securityId: metadata.securityId,
       capTables,
       admin,
       controller,
@@ -189,11 +199,15 @@ export async function initToken(
   const CapTables = kit.eth.contract(CapTablesArtifact.abi).at(capTables);
   const migrationDescription = "Migrating the cap table to SimplifiedLogic";
   kit.log.debug(migrationDescription);
-  const txMigrate = CapTables.migrate(securityId, simplifiedLogicAddress, {
-    from: controller,
-    gas: 5e5,
-    gasPrice
-  });
+  const txMigrate = CapTables.migrate(
+    metadata.securityId,
+    simplifiedLogicAddress,
+    {
+      from: controller,
+      gas: 5e5,
+      gasPrice
+    }
+  );
   const migrationReceipt = await txReceipt(kit.eth, txMigrate);
   transcript.push({
     type: "send",
@@ -201,7 +215,7 @@ export async function initToken(
     hash: txMigrate,
     gasUsed: migrationReceipt.gasUsed,
     data: {
-      securityId,
+      securityId: metadata.securityId,
       simplifiedLogicAddress
     }
   });
@@ -209,12 +223,19 @@ export async function initToken(
   kit.log.debug(tokenFrontDescription);
   const txFront = kit.eth
     .contract(TokenFront.abi)
-    .new(simplifiedLogicAddress, admin, {
-      data: TokenFront.bytecode,
-      from: controller,
-      gas: 1e6,
-      gasPrice
-    });
+    .new(
+      simplifiedLogicAddress,
+      admin,
+      metadata.name,
+      metadata.symbol,
+      metadata.decimals,
+      {
+        data: TokenFront.bytecode,
+        from: controller,
+        gas: 1e6,
+        gasPrice
+      }
+    );
   const recTokenFront = await txReceipt(kit.eth, txFront.transactionHash);
   const front = recTokenFront.contractAddress as string;
   transcript.push({

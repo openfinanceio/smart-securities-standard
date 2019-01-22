@@ -18,7 +18,8 @@ export const baseSecurityRT = iots.type({
   ),
   metadata: iots.type({
     name: iots.string,
-    symbol: iots.string
+    symbol: iots.string,
+    decimals: iots.number
   })
 });
 

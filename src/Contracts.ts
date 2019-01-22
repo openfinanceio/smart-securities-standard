@@ -94,9 +94,18 @@ export namespace Data {
       coder.encodeParam("address", frontAddress)
     ]);
 
-  export const newTokenFront = (logicAddress: string, admin: string) =>
+  export const newTokenFront = (
+    logicAddress: string,
+    admin: string,
+    name: string,
+    symbol: string,
+    decimals: number
+  ) =>
     U.hexSmash([
       TokenFront.bytecode,
-      coder.encodeParams(["address", "address"], [logicAddress, admin])
+      coder.encodeParams(
+        ["address", "address", "string", "string", "uint8"],
+        [logicAddress, admin, name, symbol, decimals]
+      )
     ]);
 }

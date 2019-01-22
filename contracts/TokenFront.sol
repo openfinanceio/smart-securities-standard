@@ -2,7 +2,7 @@ pragma solidity ^0.5.0;
 
 import { DelegatedERC20 } from "./interfaces/DelegatedERC20.sol";
 
-import { ERC20 } from "./zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import { ERC20Detailed } from "./zeppelin-solidity/contracts/token/ERC20/ERC20Detailed.sol";
 import { Ownable } from "./zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 /**
@@ -10,11 +10,17 @@ import { Ownable } from "./zeppelin-solidity/contracts/ownership/Ownable.sol";
  * restricted token.  Systems which intend to use the token front should not
  * emit ERC20 events.  Rather this contract should emit them. 
  */
-contract TokenFront is ERC20, Ownable {
+contract TokenFront is ERC20Detailed, Ownable {
 
     DelegatedERC20 public tokenLogic;
     
-    constructor(DelegatedERC20 _tokenLogic, address _owner) public {
+    constructor(
+        DelegatedERC20 _tokenLogic, 
+        address _owner, 
+        string memory name, 
+        string memory symbol, 
+        uint8 decimals
+    ) public ERC20Detailed(name, symbol, decimals) {
         tokenLogic = _tokenLogic; 
         _transferOwnership(_owner);
     }
