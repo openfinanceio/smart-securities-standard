@@ -1,3 +1,4 @@
+import * as AdministrationJson from "../build/Administration.json";
 import * as CapTablesJson from "../build/CapTables.json";
 import * as OwnableJson from "../build/Ownable.json";
 import * as TokenFrontJson from "../build/TokenFront.json";
@@ -14,6 +15,7 @@ export interface Artifact {
   bytecode: string;
 }
 
+export const Administration = (AdministrationJson as any) as Artifact;
 export const CapTables = (CapTablesJson as any) as Artifact;
 export const Ownable = (OwnableJson as any) as Artifact;
 export const SimplifiedTokenLogic = (SimplifiedLogicJson as any) as Artifact;

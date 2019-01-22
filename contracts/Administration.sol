@@ -7,7 +7,7 @@ import { TokenFront } from "./TokenFront.sol";
 /**
  * This contract adds a 2-of-3 signature requirement to administrative calls.
  */
-contract Administer {
+contract Administration {
 
     /** 
       * Since a method call requires 3 signatures, when it has one signature it
