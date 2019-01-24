@@ -12,6 +12,7 @@ export {
   TokenFront
 } from "./Contracts";
 export * from "./Types";
+export { toZeroXHex } from "./Util";
 
 import * as offline from "./Issue/Offline";
 

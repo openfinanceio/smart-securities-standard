@@ -22,6 +22,19 @@ export interface Config {
   gasReportPath: string;
 }
 
+export const configRT: iots.Type<Config> = iots.type({
+  net: iots.type({
+    host: iots.string,
+    port: iots.number
+  }),
+  controller: iots.string,
+  gasReportPath: iots.string
+});
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~ //
+// Different specifications //
+// ~~~~~~~~~~~~~~~~~~~~~~~~ //
+
 export interface Spec {
   /**
    * When null, deploy a new captables; otherwise this is the address of the
@@ -40,6 +53,16 @@ export const specRT: iots.Type<Spec> = iots.type({
   resolver: iots.string,
   securityPaths: iots.array(iots.string)
 });
+
+export const adminSpecRT = iots.type({
+  tokenLogic: iots.string,
+  tokenFront: iots.string,
+  cosignerA: iots.string,
+  cosignerB: iots.string,
+  cosignerC: iots.string
+});
+
+export type AdminSpec = iots.TypeOf<typeof adminSpecRT>;
 
 export interface S3 {
   name: string;

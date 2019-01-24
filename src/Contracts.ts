@@ -38,6 +38,21 @@ export const sigHashes = {
 };
 
 export namespace Data {
+  export const newAdministration = (
+    tokenLogic: string,
+    tokenFront: string,
+    cosignerA: string,
+    cosignerB: string,
+    cosignerC: string
+  ) =>
+    U.hexSmash([
+      Administration.bytecode,
+      coder.encodeParams(
+        ["address", "address", "address", "address", "address"],
+        [tokenLogic, tokenFront, cosignerA, cosignerB, cosignerC]
+      )
+    ]);
+
   export const initializeCapTable = (supply: BigNumber, admin: string) =>
     U.hexSmash([
       sigHashes.CapTables.initialize,
