@@ -9,6 +9,7 @@ import { BigNumber } from "bignumber.js";
 import * as coder from "web3/lib/solidity/coder";
 
 import * as U from "./Util";
+import { AdminSpec } from "./Types";
 
 export interface Artifact {
   abi: ZRX.ContractAbi;
@@ -38,18 +39,18 @@ export const sigHashes = {
 };
 
 export namespace Data {
-  export const newAdministration = (
-    tokenLogic: string,
-    tokenFront: string,
-    cosignerA: string,
-    cosignerB: string,
-    cosignerC: string
-  ) =>
+  export const newAdministration = (spec: AdminSpec) =>
     U.hexSmash([
       Administration.bytecode,
       coder.encodeParams(
         ["address", "address", "address", "address", "address"],
-        [tokenLogic, tokenFront, cosignerA, cosignerB, cosignerC]
+        [
+          spec.tokenLogic,
+          spec.tokenFront,
+          spec.cosignerA,
+          spec.cosignerB,
+          spec.cosignerC
+        ]
       )
     ]);
 

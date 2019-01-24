@@ -2,22 +2,34 @@
 
 import { BigNumber } from "bignumber.js";
 import * as program from "commander";
+import * as crypto from "crypto";
+import EthereumTx = require("ethereumjs-tx");
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import * as _ from "lodash";
+import { createInterface } from "readline";
 import * as Web3 from "web3";
 import * as winston from "winston";
 
 import {
   BaseSecurity,
+  Data,
   IndexedSecurity,
   OfflineTranscriptEntry,
+  adminSpecRT,
   newResolver,
   baseSecurityRT,
   indexedSecurityRT
 } from "../src";
 import { txReceipt } from "../src/Web3";
+import * as U from "../src/Util";
 
-import { Config, GasReport, OfflineReport, specRT } from "./cli/Types";
+import {
+  Config,
+  GasReport,
+  OfflineReport,
+  configRT,
+  specRT
+} from "./cli/Types";
 import { initS3 } from "./cli/Init";
 import { issueOnline } from "./cli/Online";
 import { offlineStage1, offlineStage2 } from "./cli/Offline";
@@ -42,6 +54,7 @@ const defaultSpec = `${PWD}/S3-spec.json`;
 const defaultReport = `${PWD}/S3-report.json`;
 const defaultInit = `${PWD}/S3-CapTables.json`;
 const defaultNewResolver = `${PWD}/S3-newResolver.json`;
+const defaultAdminSpec = `${PWD}/S3-administration.json`;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 // INITIALIZE S3 WITH A CAP TABLE //
@@ -379,6 +392,69 @@ program
       log.error("Oh no!");
       log.error(err);
     }
+  });
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+// DEPLOY ADMINISTRATION CONTRACT //
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+
+program
+  .command("publish-new-administration")
+  .option("-c, --config [file]", "configuration file", defaultConfig)
+  .option("-s, --spec [file]", "specification file", defaultAdminSpec)
+  .option("-t, --transcript [file]", "transcript file", defaultReport)
+  .option("-g, --gasPrice [gweiPrice]", "gas price to use in gwei", 5)
+  .option("-n, --chainId [id]", "chain id to use", 4)
+  .action(env => {
+    configRT.decode(JSON.parse(readFileSync(env.config, "utf8"))).fold(
+      errs => {
+        log.error("Malformed configuration");
+      },
+      config => {
+        const web3 = new Web3(
+          new Web3.providers.HttpProvider(
+            `http://${config.net.host}:${config.net.port}`
+          )
+        );
+
+        const ephemeralPrivKey = crypto.randomBytes(32);
+        const ephemeralAddr = U.privToAddress(ephemeralPrivKey);
+
+        const adminAddr = U.genAddress(ephemeralAddr, 0);
+
+        const rl = createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
+
+        rl.question(
+          "Administration contract address: " +
+            adminAddr +
+            "\nPlease press enter when you are ready to proceed.",
+          () => {
+            adminSpecRT.decode(JSON.parse(readFileSync(env.spec, "utf8"))).fold(
+              errs => {
+                log.error("Malformed administration spec");
+              },
+              spec => {
+                const tx = new EthereumTx({
+                  data: Data.newAdministration(spec),
+                  nonce: "0x0",
+                  from: ephemeralAddr,
+                  gasPrice: gweiToWei(env.gasPrice),
+                  gas: 5e5,
+                  chainId: env.chainId
+                });
+
+                tx.sign(ephemeralPrivKey);
+
+                web3.eth.sendRawTransaction(U.toZeroXHex(tx.serialize()));
+              }
+            );
+          }
+        );
+      }
+    );
   });
 
 program.parse(process.argv);

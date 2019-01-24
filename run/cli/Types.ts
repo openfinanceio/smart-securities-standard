@@ -54,16 +54,6 @@ export const specRT: iots.Type<Spec> = iots.type({
   securityPaths: iots.array(iots.string)
 });
 
-export const adminSpecRT = iots.type({
-  tokenLogic: iots.string,
-  tokenFront: iots.string,
-  cosignerA: iots.string,
-  cosignerB: iots.string,
-  cosignerC: iots.string
-});
-
-export type AdminSpec = iots.TypeOf<typeof adminSpecRT>;
-
 export interface S3 {
   name: string;
   capTables: string;

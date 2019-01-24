@@ -59,6 +59,16 @@ export interface OfflineTranscriptEntry {
 export type Transcript = Array<TranscriptEntry>;
 export type OfflineTranscript = Array<OfflineTranscriptEntry>;
 
+export const adminSpecRT = iots.type({
+  tokenLogic: iots.string,
+  tokenFront: iots.string,
+  cosignerA: iots.string,
+  cosignerB: iots.string,
+  cosignerC: iots.string
+});
+
+export type AdminSpec = iots.TypeOf<typeof adminSpecRT>;
+
 /** A selection of transfer errors */
 export namespace Errors {
   export enum RegD {
