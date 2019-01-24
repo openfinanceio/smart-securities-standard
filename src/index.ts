@@ -5,6 +5,7 @@ export { newResolver } from "./Maintenance/Resolver";
 export { BigNumber } from "bignumber.js";
 
 export {
+  Administration,
   Artifact,
   CapTables,
   Data,
