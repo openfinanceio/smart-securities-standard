@@ -44,14 +44,14 @@ contract Administration {
     enum Signer { A, B, C }
 
 
-    SimplifiedLogic targetLogic;
-    TokenFront targetFront;
+    SimplifiedLogic public targetLogic;
+    TokenFront public targetFront;
 
-    address cosignerA;
-    address cosignerB;
-    address cosignerC;
+    address public cosignerA;
+    address public cosignerB;
+    address public cosignerC;
 
-    mapping(uint256 => MethodCall) methodCalls;
+    mapping(uint256 => MethodCall) public methodCalls;
     
 
     constructor(
@@ -88,11 +88,6 @@ contract Administration {
             "method status must be none or open"
         );
 
-        require(
-            _argHash == mc.argHash,
-            "same arguments must be passed"
-        );
-
         if (mc.status == CallStatus.None) {
 
             mc.status = CallStatus.Open;
@@ -100,6 +95,11 @@ contract Administration {
             mc.argHash = _argHash;
 
         } else {
+            require(
+                _argHash == mc.argHash,
+                "same arguments must be passed"
+            );
+
             require(
                 mc.op == _op,
                 "the call on file must match the current call"
@@ -112,6 +112,7 @@ contract Administration {
      */
     function addSig(uint256 _callNumber) internal {
         MethodCall storage mc = methodCalls[_callNumber];
+
         if (msg.sender == cosignerA) {
             mc.sigA = true;
         } else if (msg.sender == cosignerB) {
@@ -119,6 +120,7 @@ contract Administration {
         } else if (msg.sender == cosignerC) {
             mc.sigC = true;
         }
+
     }
 
     /**
