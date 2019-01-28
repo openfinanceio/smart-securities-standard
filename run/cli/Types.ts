@@ -22,6 +22,19 @@ export interface Config {
   gasReportPath: string;
 }
 
+export const configRT: iots.Type<Config> = iots.type({
+  net: iots.type({
+    host: iots.string,
+    port: iots.number
+  }),
+  controller: iots.string,
+  gasReportPath: iots.string
+});
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~ //
+// Different specifications //
+// ~~~~~~~~~~~~~~~~~~~~~~~~ //
+
 export interface Spec {
   /**
    * When null, deploy a new captables; otherwise this is the address of the

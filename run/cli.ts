@@ -1,5 +1,6 @@
 // cli tool for S3
 
+import * as assert from "assert";
 import { BigNumber } from "bignumber.js";
 import * as program from "commander";
 import { existsSync, readFileSync, writeFileSync } from "fs";
@@ -8,16 +9,24 @@ import * as Web3 from "web3";
 import * as winston from "winston";
 
 import {
+  Administration,
   BaseSecurity,
   IndexedSecurity,
   OfflineTranscriptEntry,
+  adminSpecRT,
   newResolver,
   baseSecurityRT,
   indexedSecurityRT
 } from "../src";
 import { txReceipt } from "../src/Web3";
 
-import { Config, GasReport, OfflineReport, specRT } from "./cli/Types";
+import {
+  Config,
+  GasReport,
+  OfflineReport,
+  configRT,
+  specRT
+} from "./cli/Types";
 import { initS3 } from "./cli/Init";
 import { issueOnline } from "./cli/Online";
 import { offlineStage1, offlineStage2 } from "./cli/Offline";
@@ -42,6 +51,7 @@ const defaultSpec = `${PWD}/S3-spec.json`;
 const defaultReport = `${PWD}/S3-report.json`;
 const defaultInit = `${PWD}/S3-CapTables.json`;
 const defaultNewResolver = `${PWD}/S3-newResolver.json`;
+const defaultAdminSpec = `${PWD}/S3-administration.json`;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 // INITIALIZE S3 WITH A CAP TABLE //
@@ -379,6 +389,122 @@ program
       log.error("Oh no!");
       log.error(err);
     }
+  });
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+// DEPLOY ADMINISTRATION CONTRACT //
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
+
+program
+  .command("new-administration")
+  .option("-c, --config [file]", "configuration file", defaultConfig)
+  .option("-s, --spec [file]", "specification file", defaultAdminSpec)
+  .option("-t, --transcript [file]", "transcript file", defaultReport)
+  .option("-g, --gasPrice [gweiPrice]", "gas price to use in gwei", 5)
+  .action(env => {
+    configRT.decode(JSON.parse(readFileSync(env.config, "utf8"))).fold(
+      errs => {
+        log.error("Malformed configuration");
+      },
+      config => {
+        const web3 = new Web3(
+          new Web3.providers.HttpProvider(
+            `http://${config.net.host}:${config.net.port}`
+          )
+        );
+
+        adminSpecRT.decode(JSON.parse(readFileSync(env.spec, "utf8"))).fold(
+          errs => {
+            log.error("Malformed administration spec");
+          },
+          async spec => {
+            checkOutput(env.transcript);
+
+            const { transactionHash } = web3.eth
+              .contract(Administration.abi)
+              .new(
+                spec.tokenLogic,
+                spec.tokenFront,
+                spec.cosignerA,
+                spec.cosignerB,
+                spec.cosignerC,
+                {
+                  data: Administration.bytecode,
+                  from: config.controller,
+                  gas: 1.5e6,
+                  gasPrice: env.gasPrice
+                }
+              );
+
+            const adminAddress = (await txReceipt(web3.eth, transactionHash))
+              .contractAddress;
+
+            log.info(`Administration deployed to: ${adminAddress}`);
+
+            writeFileSync(
+              env.transcript,
+              JSON.stringify({ adminAddress }),
+              "utf8"
+            );
+          }
+        );
+      }
+    );
+  });
+
+program
+  .command("audit-administration")
+  .option("-c, --config [file]", "configuration file", defaultConfig)
+  .option("-s, --spec [file]", "specification file", defaultAdminSpec)
+  .option("-t, --transcript [file]", "transcript file", defaultReport)
+  .action(env => {
+    configRT.decode(JSON.parse(readFileSync(env.config, "utf8"))).fold(
+      errs => {
+        log.error("Malformed configuration");
+      },
+      config => {
+        const web3 = new Web3(
+          new Web3.providers.HttpProvider(
+            `http://${config.net.host}:${config.net.port}`
+          )
+        );
+
+        adminSpecRT.decode(JSON.parse(readFileSync(env.spec, "utf8"))).fold(
+          errs => {
+            log.error("Malformed administration spec");
+          },
+          spec => {
+            try {
+              const { adminAddress } = JSON.parse(
+                readFileSync(env.transcript, "utf8")
+              );
+
+              const admin = web3.eth
+                .contract(Administration.abi)
+                .at(adminAddress);
+
+              assert.equal(
+                admin.targetLogic.call(),
+                spec.tokenLogic,
+                "tokenLogic"
+              );
+              assert.equal(
+                admin.targetFront.call(),
+                spec.tokenFront,
+                "tokenFront"
+              );
+              assert.equal(admin.cosignerA.call(), spec.cosignerA, "cosignerA");
+              assert.equal(admin.cosignerB.call(), spec.cosignerB, "cosignerB");
+              assert.equal(admin.cosignerC.call(), spec.cosignerC, "cosignerC");
+
+              log.info("All checks passed");
+            } catch (err) {
+              log.error("Audit failed: " + err.message);
+            }
+          }
+        );
+      }
+    );
   });
 
 program.parse(process.argv);

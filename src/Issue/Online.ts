@@ -171,7 +171,7 @@ export async function initToken(
   const transcript: Transcript = [];
   const txSimplifiedLogic = kit.eth
     .contract(SimplifiedTokenLogic.abi)
-    .new(metadata.securityId, capTables, admin, controller, {
+    .new(metadata.securityId, capTables, controller, controller, {
       data: SimplifiedTokenLogic.bytecode,
       from: controller,
       gas: 1.5e6,
@@ -255,7 +255,7 @@ export async function initToken(
   const setFrontDescription = "Setting the front";
   kit.log.debug(setFrontDescription);
   const txSetFront = simplifiedLogic.setFront(front, {
-    from: admin,
+    from: controller,
     gas: 5e5,
     gasPrice
   });
@@ -269,6 +269,30 @@ export async function initToken(
       front
     }
   });
+
+  {
+    // Set the admin on SimplifiedLogic
+
+    const txHash = simplifiedLogic.transferOwnership(admin, {
+      from: controller,
+      gas: 5e5,
+      gasPrice
+    });
+
+    const receipt = await txReceipt(kit.eth, txHash);
+
+    transcript.push({
+      type: "send",
+      description: "sets the admin on SimplifiedTokenLogic",
+      hash: txHash,
+      gasUsed: receipt.gasUsed,
+      data: {
+        front,
+        admin
+      }
+    });
+  }
+
   return [
     {
       front,

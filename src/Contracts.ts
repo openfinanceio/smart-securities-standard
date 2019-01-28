@@ -1,3 +1,4 @@
+import * as AdministrationJson from "../build/Administration.json";
 import * as CapTablesJson from "../build/CapTables.json";
 import * as OwnableJson from "../build/Ownable.json";
 import * as TokenFrontJson from "../build/TokenFront.json";
@@ -8,12 +9,14 @@ import { BigNumber } from "bignumber.js";
 import * as coder from "web3/lib/solidity/coder";
 
 import * as U from "./Util";
+import { AdminSpec } from "./Types";
 
 export interface Artifact {
   abi: ZRX.ContractAbi;
   bytecode: string;
 }
 
+export const Administration = (AdministrationJson as any) as Artifact;
 export const CapTables = (CapTablesJson as any) as Artifact;
 export const Ownable = (OwnableJson as any) as Artifact;
 export const SimplifiedTokenLogic = (SimplifiedLogicJson as any) as Artifact;
@@ -36,6 +39,21 @@ export const sigHashes = {
 };
 
 export namespace Data {
+  export const newAdministration = (spec: AdminSpec) =>
+    U.hexSmash([
+      Administration.bytecode,
+      coder.encodeParams(
+        ["address", "address", "address", "address", "address"],
+        [
+          spec.tokenLogic,
+          spec.tokenFront,
+          spec.cosignerA,
+          spec.cosignerB,
+          spec.cosignerC
+        ]
+      )
+    ]);
+
   export const initializeCapTable = (supply: BigNumber, admin: string) =>
     U.hexSmash([
       sigHashes.CapTables.initialize,

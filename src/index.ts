@@ -5,6 +5,7 @@ export { newResolver } from "./Maintenance/Resolver";
 export { BigNumber } from "bignumber.js";
 
 export {
+  Administration,
   Artifact,
   CapTables,
   Data,
@@ -12,6 +13,7 @@ export {
   TokenFront
 } from "./Contracts";
 export * from "./Types";
+export { toZeroXHex } from "./Util";
 
 import * as offline from "./Issue/Offline";
 
