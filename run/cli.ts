@@ -240,13 +240,19 @@ program
         assert.equal(
           tokenLogic.owner.call(),
           security.admin,
-          "SimplifiedTokenLogic owner"
+          "SimplifiedLogic owner"
         );
 
         assert.equal(
           tokenLogic.resolver.call(),
           security.resolver,
-          "SimplifiedTokenLogic resolver"
+          "SimplifiedLogic resolver"
+        );
+
+        assert.equal(
+          tokenLogic.front.call(),
+          deployment.front,
+          "SimplifiedLogic front"
         );
 
         log.info("Audit passed");
