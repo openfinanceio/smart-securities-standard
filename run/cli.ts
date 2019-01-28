@@ -1,18 +1,16 @@
 // cli tool for S3
 
+import * as assert from "assert";
 import { BigNumber } from "bignumber.js";
 import * as program from "commander";
-import * as crypto from "crypto";
-import EthereumTx = require("ethereumjs-tx");
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import * as _ from "lodash";
-import { createInterface } from "readline";
 import * as Web3 from "web3";
 import * as winston from "winston";
 
 import {
+  Administration,
   BaseSecurity,
-  Data,
   IndexedSecurity,
   OfflineTranscriptEntry,
   adminSpecRT,
@@ -21,7 +19,6 @@ import {
   indexedSecurityRT
 } from "../src";
 import { txReceipt } from "../src/Web3";
-import * as U from "../src/Util";
 
 import {
   Config,
@@ -399,12 +396,11 @@ program
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
 program
-  .command("publish-new-administration")
+  .command("new-administration")
   .option("-c, --config [file]", "configuration file", defaultConfig)
   .option("-s, --spec [file]", "specification file", defaultAdminSpec)
   .option("-t, --transcript [file]", "transcript file", defaultReport)
   .option("-g, --gasPrice [gweiPrice]", "gas price to use in gwei", 5)
-  .option("-n, --chainId [id]", "chain id to use", 4)
   .action(env => {
     configRT.decode(JSON.parse(readFileSync(env.config, "utf8"))).fold(
       errs => {
@@ -417,40 +413,87 @@ program
           )
         );
 
-        const ephemeralPrivKey = crypto.randomBytes(32);
-        const ephemeralAddr = U.privToAddress(ephemeralPrivKey);
+        adminSpecRT.decode(JSON.parse(readFileSync(env.spec, "utf8"))).fold(
+          errs => {
+            log.error("Malformed administration spec");
+          },
+          async spec => {
+            checkOutput(env.transcript);
 
-        const adminAddr = U.genAddress(ephemeralAddr, 0);
+            const hash = web3.eth
+              .contract(Administration.abi)
+              .new(
+                spec.tokenLogic,
+                spec.tokenFront,
+                spec.cosignerA,
+                spec.cosignerB,
+                spec.cosignerC,
+                { gas: 1.5e6 }
+              );
 
-        const rl = createInterface({
-          input: process.stdin,
-          output: process.stdout
-        });
+            const adminAddress = (await txReceipt(web3.eth, hash))
+              .contractAddress;
 
-        rl.question(
-          "Administration contract address: " +
-            adminAddr +
-            "\nPlease press enter when you are ready to proceed.",
-          () => {
-            adminSpecRT.decode(JSON.parse(readFileSync(env.spec, "utf8"))).fold(
-              errs => {
-                log.error("Malformed administration spec");
-              },
-              spec => {
-                const tx = new EthereumTx({
-                  data: Data.newAdministration(spec),
-                  nonce: "0x0",
-                  from: ephemeralAddr,
-                  gasPrice: gweiToWei(env.gasPrice),
-                  gas: 5e5,
-                  chainId: env.chainId
-                });
+            log.info(`Administration deployed to: ${adminAddress}`);
 
-                tx.sign(ephemeralPrivKey);
-
-                web3.eth.sendRawTransaction(U.toZeroXHex(tx.serialize()));
-              }
+            writeFileSync(
+              env.transcript,
+              JSON.stringify({ adminAddress }),
+              "utf8"
             );
+          }
+        );
+      }
+    );
+  });
+
+program
+  .command("audit-administration")
+  .option("-c, --config [file]", "configuration file", defaultConfig)
+  .option("-s, --spec [file]", "specification file", defaultAdminSpec)
+  .option("-t, --transcript [file]", "transcript file", defaultReport)
+  .action(env => {
+    configRT.decode(JSON.parse(readFileSync(env.config, "utf8"))).fold(
+      errs => {
+        log.error("Malformed configuration");
+      },
+      config => {
+        const web3 = new Web3(
+          new Web3.providers.HttpProvider(
+            `http://${config.net.host}:${config.net.port}`
+          )
+        );
+
+        adminSpecRT.decode(JSON.parse(readFileSync(env.spec, "utf8"))).fold(
+          errs => {
+            log.error("Malformed administration spec");
+          },
+          spec => {
+            try {
+              const { adminAddress } = JSON.parse(
+                readFileSync(env.transcript, "utf8")
+              );
+
+              const admin = web3.eth
+                .contract(Administration.abi)
+                .at(adminAddress);
+
+              assert.equal(
+                admin.tokenLogic.call(),
+                spec.tokenLogic,
+                "tokenLogic"
+              );
+              assert.equal(
+                admin.tokenFront.call(),
+                spec.tokenFront,
+                "tokenFront"
+              );
+              assert.equal(admin.cosignerA, spec.cosignerA, "cosignerA");
+              assert.equal(admin.cosignerB, spec.cosignerB, "cosignerB");
+              assert.equal(admin.cosignerC, spec.cosignerC, "cosignerC");
+            } catch (err) {
+              log.error("Audit failed: " + err.message);
+            }
           }
         );
       }
