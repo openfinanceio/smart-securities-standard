@@ -1,9 +1,11 @@
 Smart Securities Standard (S3) 
 ====
 
-## v0.5.0 -- 2019-01-??
+## v0.4.1 -- 2019-01-??
 
-- Adds administration contract adding 2-of-3 cosigner requirement for administrative actions
+- Adds administration contract adding 2-of-3 cosigner requirement for
+  administrative actions
+- Updates cli tool with administration functionality
 
 ## v0.4.0 -- 2019-01-22
 
