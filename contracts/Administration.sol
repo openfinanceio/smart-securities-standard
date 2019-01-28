@@ -10,9 +10,9 @@ import { TokenFront } from "./TokenFront.sol";
 contract Administration {
 
     /** 
-      * Since a method call requires 3 signatures, when it has one signature it
-      * is in an indeterminate state.
-      */
+     * Since a method call requires 3 signatures, when it has one signature it
+     * is in an indeterminate state.
+     */
     enum CallStatus {
         None,
         Open,
@@ -20,8 +20,8 @@ contract Administration {
     }
 
     /**
-      * These are the operations available.
-      */
+     * These are the operations available.
+     */
     enum Operation {
         AbortCall,
         SetResolver,
@@ -32,6 +32,9 @@ contract Administration {
         Rotate
     }
 
+    /** 
+     * Information about the current state of the call 
+     */
     struct MethodCall {
         CallStatus status;
         Operation op;
@@ -186,9 +189,9 @@ contract Administration {
     }
 
     /**
-     * SimplifiedLogic.migrate
+     * SimplifiedLogic.migrate & TokenFront.newLogic
      */
-    function migrate(uint256 _callNumber, address _newLogic) public {
+    function migrate(uint256 _callNumber, DelegatedERC20 _newLogic) public {
 
         setup(
             _callNumber, 
@@ -200,7 +203,8 @@ contract Administration {
 
         if (thresholdMet(_callNumber)) {
 
-            targetLogic.migrate(_newLogic);
+            targetLogic.migrate(address(_newLogic));
+            targetFront.migrate(_newLogic);
             complete(_callNumber);
 
         }
@@ -224,28 +228,6 @@ contract Administration {
 
             targetLogic.transferOwnership(_newOwner);
             targetFront.transferOwnership(_newOwner);
-            complete(_callNumber);
-
-        }
-
-    }
-
-    /**
-     * Migrate the front to new logic.
-     */
-    function newLogic(uint256 _callNumber, DelegatedERC20 _newLogic) public {
-
-        setup(
-            _callNumber, 
-            Operation.NewLogic,
-            keccak256(abi.encodePacked(_newLogic))
-        );
-
-        addSig(_callNumber);
-
-        if (thresholdMet(_callNumber)) {
-
-            targetFront.migrate(_newLogic);
             complete(_callNumber);
 
         }
