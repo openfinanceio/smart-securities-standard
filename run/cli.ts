@@ -13,6 +13,8 @@ import {
   BaseSecurity,
   IndexedSecurity,
   OfflineTranscriptEntry,
+  SimplifiedTokenLogic,
+  TokenFront,
   adminSpecRT,
   newResolver,
   baseSecurityRT,
@@ -25,6 +27,7 @@ import {
   GasReport,
   OfflineReport,
   configRT,
+  onlineReportAbrRT,
   specRT
 } from "./cli/Types";
 import { initS3 } from "./cli/Init";
@@ -110,7 +113,7 @@ program
     spec.securityPaths.forEach(path =>
       baseSecurityRT.decode(JSON.parse(readFileSync(path, "utf8"))).fold(
         errs => {
-          log.warning(`${path} contains an invalid spec`);
+          log.warn(`${path} contains an invalid spec`);
         },
         security => {
           securities.push(security);
@@ -142,6 +145,113 @@ program
     );
 
     writeFileSync(env.output, JSON.stringify(result), "utf8");
+  });
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~ //
+// AUDIT A SECURITY ISSUANCE //
+// ~~~~~~~~~~~~~~~~~~~~~~~~~ //
+
+program
+  .command("audit-issuance")
+  .option("-c, --config [file]", "path the configuration file", defaultConfig)
+  .option(
+    "-d, --declaration [file]",
+    "path to the declaration file",
+    defaultSpec
+  )
+  .option(
+    "-o, --output [file]",
+    "path to the output file, with the action report",
+    defaultReport
+  )
+  .action(async env => {
+    // Let's read in the configuration
+    const config: Config = JSON.parse(readFileSync(env.config, "utf8"));
+
+    // ... and the program that we're supposed to execute
+    const spec = specRT
+      .decode(JSON.parse(readFileSync(env.declaration, "utf8")))
+      .getOrElseL(errs => {
+        throw new Error("Invalid spec.");
+      });
+
+    const securities: Array<BaseSecurity> = [];
+    spec.securityPaths.forEach(path =>
+      baseSecurityRT.decode(JSON.parse(readFileSync(path, "utf8"))).fold(
+        errs => {
+          log.warning(`${path} contains an invalid spec`);
+        },
+        security => {
+          securities.push(security);
+        }
+      )
+    );
+
+    const web3 = new Web3(
+      new Web3.providers.HttpProvider(
+        `http://${config.net.host}:${config.net.port}`
+      )
+    );
+
+    const report = onlineReportAbrRT
+      .decode(JSON.parse(readFileSync(env.output, "utf8")))
+      .getOrElseL(errs => {
+        throw new Error("Unable to decode report");
+      });
+
+    securities.forEach(security => {
+      log.info(`Auditing ${security.metadata.name}`);
+
+      const deployment = report.ethState.securities.find(
+        x => x.name === security.metadata.name
+      );
+
+      if (deployment === undefined) {
+        log.error("Deployment not found.");
+      } else {
+        const tokenFront = web3.eth
+          .contract(TokenFront.abi)
+          .at(deployment.front);
+
+        assert.equal(
+          tokenFront.owner.call(),
+          security.admin,
+          "TokenFront owner"
+        );
+
+        assert.equal(
+          tokenFront.tokenLogic.call(),
+          deployment.logic,
+          "TokenFront logic"
+        );
+
+        security.investors.forEach(investor => {
+          assert.equal(
+            tokenFront.balanceOf.call(investor.address).toString(),
+            investor.amount,
+            investor.address + " balance"
+          );
+        });
+
+        const tokenLogic = web3.eth
+          .contract(SimplifiedTokenLogic.abi)
+          .at(deployment.logic);
+
+        assert.equal(
+          tokenLogic.owner.call(),
+          security.admin,
+          "SimplifiedTokenLogic owner"
+        );
+
+        assert.equal(
+          tokenLogic.resolver.call(),
+          security.resolver,
+          "SimplifiedTokenLogic resolver"
+        );
+
+        log.info("Audit passed");
+      }
+    });
   });
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //

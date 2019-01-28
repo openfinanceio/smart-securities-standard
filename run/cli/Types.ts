@@ -61,6 +61,13 @@ export interface S3 {
   logic: string;
 }
 
+export const s3RT: iots.Type<S3> = iots.type({
+  name: iots.string,
+  capTables: iots.string,
+  front: iots.string,
+  logic: iots.string
+});
+
 export interface OnlineReport {
   transcript: Transcript;
   ethState: {
@@ -68,6 +75,13 @@ export interface OnlineReport {
     securities: Array<S3>;
   };
 }
+
+export const onlineReportAbrRT = iots.type({
+  ethState: iots.type({
+    capTables: iots.string,
+    securities: iots.array(s3RT)
+  })
+});
 
 export interface OfflineReport {
   nonce: number;
