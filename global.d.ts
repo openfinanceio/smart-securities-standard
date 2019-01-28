@@ -4,3 +4,4 @@ declare module "*.json" {
 }
 
 declare module "web3/lib/solidity/coder";
+declare module "truffle-hdwallet-provider";

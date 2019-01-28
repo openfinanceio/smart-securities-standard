@@ -24,6 +24,7 @@
     "@types/ethereumjs-tx": "^1.0.0",
     "@types/lodash": "^4.14.107",
     "@types/mocha": "^2.2.48",
+    "@types/trezor-connect": "^6.0.0",
     "ethereum-types": "^0.0.2",
     "mocha": "^5.0.1",
     "ts-node": "^7.0.1",
@@ -37,9 +38,10 @@
     "commander": "^2.18.0",
     "ethereumjs-util": "^5.2.0",
     "ethereumjs-tx": "^1.3.7",
-    "io-ts": "^1.5.0",
+    "io-ts": "1.5.1",
     "lodash": "^4.17.5",
-    "web3": "^0.20.6",
+    "trezor-connect": "6.0.3",
+    "web3": "0.20.7",
     "winston": "^3.1.0"
   }
 }
