@@ -84,7 +84,7 @@ program
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
 program
-  .command("issueOnline")
+  .command("issue-online")
   .option("-c, --config [file]", "path the configuration file", defaultConfig)
   .option(
     "-d, --declaration [file]",
@@ -259,7 +259,7 @@ program
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
 program
-  .command("issueOffline")
+  .command("issue-offline")
   .option(
     "-d, --declaration [file]",
     "path to the declaration file",
@@ -436,7 +436,7 @@ program
 
 // TODO Trezor support
 program
-  .command("newResolver")
+  .command("new-resolver")
   .option(
     "-s, --simplifiedTokenLogic <address>",
     "the address of the simplified token logic to change"
