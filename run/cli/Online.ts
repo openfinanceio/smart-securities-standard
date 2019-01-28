@@ -33,20 +33,17 @@ export async function issueOnline(
     const deployments: Array<S3> = [];
     for (let security of securities) {
       try {
-        const [{ front, middleware }, issueTranscript] = await issue(
-          security,
-          capTables,
-          config.controller,
-          gasPrice(),
-          {
-            eth: web3.eth,
-            log
-          }
-        );
+        const [
+          { securityId, front, middleware },
+          issueTranscript
+        ] = await issue(security, capTables, config.controller, gasPrice(), {
+          eth: web3.eth,
+          log
+        });
         transcripts.push(issueTranscript);
         deployments.push({
           name: security.metadata.name,
-          capTables,
+          securityId: securityId.toString(),
           front,
           logic: middleware
         });

@@ -56,14 +56,14 @@ export const specRT: iots.Type<Spec> = iots.type({
 
 export interface S3 {
   name: string;
-  capTables: string;
+  securityId: string;
   front: string;
   logic: string;
 }
 
 export const s3RT: iots.Type<S3> = iots.type({
   name: iots.string,
-  capTables: iots.string,
+  securityId: iots.string,
   front: iots.string,
   logic: iots.string
 });
