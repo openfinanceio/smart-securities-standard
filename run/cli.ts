@@ -420,7 +420,7 @@ program
           async spec => {
             checkOutput(env.transcript);
 
-            const hash = web3.eth
+            const { transactionHash } = web3.eth
               .contract(Administration.abi)
               .new(
                 spec.tokenLogic,
@@ -428,10 +428,15 @@ program
                 spec.cosignerA,
                 spec.cosignerB,
                 spec.cosignerC,
-                { gas: 1.5e6 }
+                {
+                  data: Administration.bytecode,
+                  from: config.controller,
+                  gas: 1.5e6,
+                  gasPrice: env.gasPrice
+                }
               );
 
-            const adminAddress = (await txReceipt(web3.eth, hash))
+            const adminAddress = (await txReceipt(web3.eth, transactionHash))
               .contractAddress;
 
             log.info(`Administration deployed to: ${adminAddress}`);
@@ -479,18 +484,20 @@ program
                 .at(adminAddress);
 
               assert.equal(
-                admin.tokenLogic.call(),
+                admin.targetLogic.call(),
                 spec.tokenLogic,
                 "tokenLogic"
               );
               assert.equal(
-                admin.tokenFront.call(),
+                admin.targetFront.call(),
                 spec.tokenFront,
                 "tokenFront"
               );
-              assert.equal(admin.cosignerA, spec.cosignerA, "cosignerA");
-              assert.equal(admin.cosignerB, spec.cosignerB, "cosignerB");
-              assert.equal(admin.cosignerC, spec.cosignerC, "cosignerC");
+              assert.equal(admin.cosignerA.call(), spec.cosignerA, "cosignerA");
+              assert.equal(admin.cosignerB.call(), spec.cosignerB, "cosignerB");
+              assert.equal(admin.cosignerC.call(), spec.cosignerC, "cosignerC");
+
+              log.info("All checks passed");
             } catch (err) {
               log.error("Audit failed: " + err.message);
             }
