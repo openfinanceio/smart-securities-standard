@@ -29,7 +29,8 @@ contract Administration {
         Migrate,
         NewAdmin,
         NewLogic,
-        Rotate
+        Rotate,
+        Bind
     }
 
     /** 
@@ -47,6 +48,9 @@ contract Administration {
     enum Signer { A, B, C }
 
 
+    bool public bound = false;
+    uint256 public maximumClaimedCallNumber = 0;
+
     SimplifiedLogic public targetLogic;
     TokenFront public targetFront;
 
@@ -58,14 +62,10 @@ contract Administration {
     
 
     constructor(
-        SimplifiedLogic _targetLogic,
-        TokenFront _targetFront,
         address _cosignerA,
         address _cosignerB,
         address _cosignerC
     ) public {
-        targetLogic = _targetLogic;
-        targetFront = _targetFront;
         cosignerA = _cosignerA;
         cosignerB = _cosignerB;
         cosignerC = _cosignerC;
@@ -92,6 +92,10 @@ contract Administration {
         );
 
         if (mc.status == CallStatus.None) {
+
+            if (_callNumber > maximumClaimedCallNumber) {
+                maximumClaimedCallNumber = _callNumber;
+            }
 
             mc.status = CallStatus.Open;
             mc.op = _op;
@@ -139,6 +143,29 @@ contract Administration {
      */
     function complete(uint256 _callNumber) internal {
         methodCalls[_callNumber].status = CallStatus.Complete;
+    }
+
+    /**
+     * Bind the contract to an S3 token front - token logic pair.
+     */
+    function bind(uint256 _callNumber, SimplifiedLogic _tokenLogic, TokenFront _tokenFront) public {
+        setup(
+            _callNumber, 
+            Operation.Bind, 
+            keccak256(abi.encodePacked(_tokenLogic, _tokenFront))
+        );
+
+        addSig(_callNumber);
+
+        if (thresholdMet(_callNumber)) {
+            
+            bound = true;
+            targetLogic = _tokenLogic;
+            targetFront = _tokenFront;
+
+            complete(_callNumber);
+
+        }
     }
 
     /**

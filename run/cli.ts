@@ -538,19 +538,12 @@ program
 
             const { transactionHash } = web3.eth
               .contract(Administration.abi)
-              .new(
-                spec.tokenLogic,
-                spec.tokenFront,
-                spec.cosignerA,
-                spec.cosignerB,
-                spec.cosignerC,
-                {
-                  data: Administration.bytecode,
-                  from: config.controller,
-                  gas: 1.5e6,
-                  gasPrice: env.gasPrice
-                }
-              );
+              .new(spec.cosignerA, spec.cosignerB, spec.cosignerC, {
+                data: Administration.bytecode,
+                from: config.controller,
+                gas: 1.5e6,
+                gasPrice: env.gasPrice
+              });
 
             const adminAddress = (await txReceipt(web3.eth, transactionHash))
               .contractAddress;
@@ -599,16 +592,22 @@ program
                 .contract(Administration.abi)
                 .at(adminAddress);
 
-              assert.equal(
-                admin.targetLogic.call(),
-                spec.tokenLogic,
-                "tokenLogic"
-              );
-              assert.equal(
-                admin.targetFront.call(),
-                spec.tokenFront,
-                "tokenFront"
-              );
+              if (spec.tokenLogic !== null) {
+                assert.equal(
+                  admin.targetLogic.call(),
+                  spec.tokenLogic,
+                  "tokenLogic"
+                );
+              }
+
+              if (spec.tokenFront !== null) {
+                assert.equal(
+                  admin.targetFront.call(),
+                  spec.tokenFront,
+                  "tokenFront"
+                );
+              }
+
               assert.equal(admin.cosignerA.call(), spec.cosignerA, "cosignerA");
               assert.equal(admin.cosignerB.call(), spec.cosignerB, "cosignerB");
               assert.equal(admin.cosignerC.call(), spec.cosignerC, "cosignerC");

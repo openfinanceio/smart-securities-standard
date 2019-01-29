@@ -60,8 +60,8 @@ export type Transcript = Array<TranscriptEntry>;
 export type OfflineTranscript = Array<OfflineTranscriptEntry>;
 
 export const adminSpecRT = iots.type({
-  tokenLogic: iots.string,
-  tokenFront: iots.string,
+  tokenLogic: iots.union([iots.null, iots.string]),
+  tokenFront: iots.union([iots.null, iots.string]),
   cosignerA: iots.string,
   cosignerB: iots.string,
   cosignerC: iots.string

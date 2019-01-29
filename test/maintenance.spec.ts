@@ -105,6 +105,7 @@ describe("maintenance", () => {
     const security = getSecurity(roles);
 
     let front: string;
+    let logic: string;
 
     before(async () => {
       const [capTables] = await init(roles.controller, "0", web3.eth);
@@ -121,10 +122,11 @@ describe("maintenance", () => {
       );
 
       front = deployed.front;
+      logic = deployed.middleware;
 
       const depObj = web3.eth
         .contract(Administration.abi)
-        .new(deployed.middleware, front, addressA, addressB, addressC, {
+        .new(addressA, addressB, addressC, {
           data: Administration.bytecode,
           gas: 1.5e6,
           from: deployerAddr
@@ -138,13 +140,55 @@ describe("maintenance", () => {
       );
     });
 
+    it("should bind the front and logic", async () => {
+      const admin = web3.eth.contract(Administration.abi).at(adminAddress);
+      const callNumber = 0;
+
+      {
+        const hash = admin.bind(callNumber, logic, front, {
+          from: addressA,
+          gas: 3e5
+        });
+        assert.equal(
+          (await txReceipt(web3.eth, hash)).status,
+          "0x1",
+          "should succeed"
+        );
+      }
+
+      {
+        const hash = admin.bind(callNumber, logic, front, {
+          from: addressC,
+          gas: 3e5
+        });
+        assert.equal(
+          (await txReceipt(web3.eth, hash)).status,
+          "0x1",
+          "should succeed"
+        );
+      }
+
+      assert.equal(admin.targetFront.call(), front, "should bind front");
+
+      assert.equal(admin.targetLogic.call(), logic, "should bind logic");
+    });
+
     it("should require 2 signatures to perform a clawback", async () => {
       const admin = web3.eth.contract(Administration.abi).at(adminAddress);
       const frontInstance = web3.eth.contract(TokenFront.abi).at(front);
 
-      const hashA = admin.clawback(0, roles.investor2, roles.investor1, 1e2, {
-        from: addressA
-      });
+      const callNumber = admin.maximumClaimedCallNumber.call().toNumber() + 1;
+
+      const hashA = admin.clawback(
+        callNumber,
+        roles.investor2,
+        roles.investor1,
+        1e2,
+        {
+          from: addressA,
+          gas: 3e5
+        }
+      );
 
       {
         const receipt = await txReceipt(web3.eth, hashA);
@@ -156,15 +200,23 @@ describe("maintenance", () => {
         1e5,
         "investor 1 balance after first sig"
       );
+
       assert.equal(
         frontInstance.balanceOf(roles.investor2).toNumber(),
         1e7,
         "investor 2 balance after first sig"
       );
 
-      const hashB = admin.clawback(0, roles.investor2, roles.investor1, 1e2, {
-        from: addressB
-      });
+      const hashB = admin.clawback(
+        callNumber,
+        roles.investor2,
+        roles.investor1,
+        1e2,
+        {
+          from: addressB,
+          gas: 3e5
+        }
+      );
 
       {
         const receipt = await txReceipt(web3.eth, hashB);
@@ -176,13 +228,14 @@ describe("maintenance", () => {
         1e5 + 1e2,
         "investor 1 balance after second sig"
       );
+
       assert.equal(
         frontInstance.balanceOf(roles.investor2).toNumber(),
         1e7 - 1e2,
         "investor 2 balance after second sig"
       );
 
-      const [status, op, sigA, sigB, sigC] = admin.methodCalls.call(0);
+      const [status, op, sigA, sigB, sigC] = admin.methodCalls.call(callNumber);
 
       assert.equal(status.toNumber(), 2, "method call status");
       assert.equal(op.toNumber(), 2, "operation");
@@ -193,12 +246,16 @@ describe("maintenance", () => {
 
     it("should force all calls to use the same arguments", async () => {
       const admin = web3.eth.contract(Administration.abi).at(adminAddress);
+      const callNumber = admin.maximumClaimedCallNumber.call().toNumber() + 1;
 
       const newResolver0 = web3.eth.accounts[6];
       const newResolver1 = web3.eth.accounts[7];
 
-      admin.setResolver(1, newResolver0, { from: addressB });
-      const hash = admin.setResolver(1, newResolver1, { from: addressC });
+      admin.setResolver(callNumber, newResolver0, { from: addressB });
+      const hash = admin.setResolver(callNumber, newResolver1, {
+        from: addressC,
+        gas: 3e5
+      });
 
       assert.equal(
         (await txReceipt(web3.eth, hash)).status,
@@ -209,10 +266,14 @@ describe("maintenance", () => {
 
     it("should revert if a non-signer sends a method call", async () => {
       const admin = web3.eth.contract(Administration.abi).at(adminAddress);
+      const callNumber = admin.maximumClaimedCallNumber.call().toNumber() + 1;
 
       const rando = web3.eth.accounts[9];
 
-      const hash = admin.rotate(2, addressA, rando, { from: rando });
+      const hash = admin.rotate(callNumber, addressA, rando, {
+        from: rando,
+        gas: 3e5
+      });
       assert.equal(
         (await txReceipt(web3.eth, hash)).status,
         "0x0",
