@@ -5,7 +5,8 @@ module.exports = [
       "admin-server": "./dist/run/admin-server.js"
     },
     output: { 
-      filename: "bin/[name].js",
+      filename: "[name].js",
+      path: __dirname + "/bin"
     },
     resolve: {
       extensions: [".js"]
@@ -18,13 +19,11 @@ module.exports = [
   {
     entry: "./dist/run/admin-app.js",
     output: { 
-      filename: "admin-app/bundle.js",
+      filename: "bundle.js",
+      path: __dirname + "/admin-app"
     },
     resolve: {
       extensions: [".js"]
-    },
-    node: {
-      __dirname: false
     },
     target: "web"
   }

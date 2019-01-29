@@ -16,7 +16,7 @@
     "install": "scripts/install",
     "make-docs": "typedoc --mode modules --out ./docs",
     "make-example": "tsc && node dist/run/generateExample.js",
-    "start-admin-app": "node bin/admin-server.js admin-app", 
+    "start-admin-app": "node bin/admin-server.js -d admin-app", 
     "test": "tsc -p tsconfig.test.json && mocha dist/test/*.spec.js src/"
   },
   "devDependencies": {
