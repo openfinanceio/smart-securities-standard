@@ -2,7 +2,7 @@
   "compilerOptions": {
     "alwaysStrict": true,
     "declaration": true,
-    "lib": ["es2017"],
+    "lib": ["DOM", "es2017"],
     "module": "commonjs",
     "moduleResolution": "Node",
     "noFallthroughCasesInSwitch": true,
@@ -23,7 +23,9 @@
   "include": [
     "./global.d.ts",
     "./build/*.json",
-    "./src/**/*.ts",
-    "./run/*.ts"
+    "./run/admin-app.ts",
+    "./run/admin-server.ts",
+    "./run/cli.ts",
+    "./run/generateExample.ts"
   ]
 }

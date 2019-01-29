@@ -1,0 +1,18 @@
+body {
+  color: blue;
+}
+
+.button {
+  border: 1px navy;
+  cursor: pointer;
+  padding: 1ex;
+}
+
+.button:hover {
+  background: navy;
+  color: white;
+}
+
+input {
+  border: 1px navy;
+}
