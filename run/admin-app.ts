@@ -61,7 +61,7 @@ export const userInput = (
     }
     const n = names.shift() as string;
     return withInput(n, v => {
-      vals.unshift(v);
+      vals.push(v);
       return f(names, vals);
     });
   };
@@ -178,9 +178,13 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
       )
     ]),
     section("cosign operation", [
-      userInput(["operation blob"], send, ([callBlob]) =>
-        executeCall(JSON.parse(callBlob))
-      )
+      userInput(["operation blob"], send, ([callBlob]) => {
+        const call = JSON.parse(callBlob);
+        return withAdminContext(
+          call.adminAddress,
+          block([executeCall(call), nav("summary")])
+        );
+      })
     ])
   ]);
 
@@ -204,17 +208,17 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
             header("please enter the token address"),
             userInput(["token address"], send, ([address]) =>
               withTokenLogic(address, logic =>
-                block([
-                  withFreshCallNumber(callNumber =>
+                withFreshCallNumber(callNumber =>
+                  block([
                     executeCall({
                       method: "Bind",
                       callNumber,
                       logic,
                       front: address
-                    })
-                  ),
-                  nav("summary")
-                ])
+                    }),
+                    nav("summary")
+                  ])
+                )
               )
             )
           ]);
@@ -226,18 +230,18 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
               ["source", "destination", "amount"],
               send,
               ([src, dst, amount]) =>
-                block([
-                  withFreshCallNumber(callNumber =>
+                withFreshCallNumber(callNumber =>
+                  block([
                     executeCall({
                       method: "Clawback",
                       callNumber,
                       src,
                       dst,
                       amount: parseInt(amount)
-                    })
-                  ),
-                  nav("summary")
-                ])
+                    }),
+                    nav("summary")
+                  ])
+                )
             )
           ]);
 
@@ -246,11 +250,12 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
       }
 
     case "summary":
+      const summary = { adminAddress: state.adminAddress, ...state.lastCall };
       return h("div", {}, [
         header("Call summary"),
         state.lastCall === null
           ? "no call to display"
-          : h("pre", {}, [JSON.stringify(state.lastCall, undefined, 2)])
+          : h("pre", {}, [JSON.stringify(summary, undefined, 2)])
       ]);
 
     case "error":
@@ -268,6 +273,8 @@ export const run = () => {
 
   (window as any).ethereum.enable();
   const web3 = new Web3((window as any).ethereum);
+
+  const proj = createProjector();
 
   const state: AppState = {
     node: "start",
@@ -288,7 +295,15 @@ export const run = () => {
 
       return cb(admin);
     }
+    console.log("Admin address missing");
     return null;
+  };
+
+  const trigger = (err: Error | null) => {
+    if (err !== null) {
+      throw err;
+    }
+    proj.scheduleRender();
   };
 
   const evaluate = (x: AppL) => {
@@ -296,21 +311,41 @@ export const run = () => {
 
     switch (x.tag) {
       case "block":
-        x.xs.forEach(evaluate);
+        console.log("{");
+        for (let step of x.xs) {
+          evaluate(step);
+        }
+        console.log("}");
         break;
 
       case "execute":
         state.lastCall = x.call;
         withAdmin(admin => {
           const c = x.call;
+          console.log(admin.address);
+          console.log(c);
           switch (c.method) {
             case "Bind":
-              admin.bind(c.callNumber, c.logic, c.front, { gas: 3e5 });
+              admin.bind(
+                c.callNumber,
+                c.logic,
+                c.front,
+                { gas: 3e5, from: web3.eth.accounts[0] },
+                trigger
+              );
               break;
             case "Clawback":
-              admin.clawback(c.callNumber, c.src, c.dst, c.amount, {
-                gas: 3e5
-              });
+              admin.clawback(
+                c.callNumber,
+                c.src,
+                c.dst,
+                c.amount,
+                {
+                  gas: 3e5,
+                  from: web3.eth.accounts[0]
+                },
+                trigger
+              );
               break;
           }
         });
@@ -336,7 +371,15 @@ export const run = () => {
 
       case "withFreshCallNumber":
         withAdmin(admin =>
-          evaluate(x.handler(admin.maximumClaimedCallNumber.call() + 1))
+          admin.maximumClaimedCallNumber.call((err: Error, res: any) => {
+            if (err === null) {
+              const n = res.toNumber() + 1;
+              console.log("fresh call number: ", n);
+              evaluate(x.handler(n));
+            } else {
+              throw err;
+            }
+          })
         );
         break;
 
@@ -352,7 +395,14 @@ export const run = () => {
 
       case "withTokenLogic":
         const tf = web3.eth.contract(TokenFront.abi).at(x.address);
-        evaluate(x.handler(tf.tokenLogic.call()));
+        tf.tokenLogic.call((err: Error, logic: string) => {
+          if (err === null) {
+            console.log("token logic: ", logic);
+            evaluate(x.handler(logic));
+          } else {
+            throw err;
+          }
+        });
         break;
     }
   };
@@ -371,7 +421,6 @@ export const run = () => {
   const main = document.getElementById("main");
 
   if (main !== null) {
-    const proj = createProjector();
     proj.replace(main, () =>
       render(state, x => {
         const ev = new Event("app-event") as AppEvent;

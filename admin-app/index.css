@@ -29,6 +29,6 @@ input {
 }
 
 .error {
-  background: darkgrey;
+  background: black;
   color: darkred;
 }
