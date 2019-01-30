@@ -3,11 +3,11 @@
 
 import { Administration, TokenFront } from "../src";
 
-import { VNode, h } from "maquette";
+import { VNode, createProjector, h } from "maquette";
 import * as Web3 from "web3";
 
 // Injected by MetaMask
-declare const web3: Web3;
+declare const ethereum: any;
 
 // Possible operations
 export enum Operation {
@@ -21,19 +21,10 @@ export enum Operation {
   Bind
 }
 
-export const opNames = [
-  "AbortCall",
-  "SetResolver",
-  "Clawback",
-  "Migrate",
-  "NewAdmin",
-  "NewLogic",
-  "Rotate",
-  "Bind"
-];
-
 export class AppEvent extends Event {
-  payload: AppL;
+  constructor(readonly payload: AppL) {
+    super("app-event");
+  }
 }
 
 export const randomKey = () => Math.random().toString();
@@ -102,6 +93,7 @@ export type AppL =
   | { tag: "nav"; node: AppNode }
   | { tag: "selectOperation"; operation: Operation }
   | { tag: "withAdminContext"; address: string; next: AppL }
+  | { tag: "withNextCallNumber"; handler: (n: number) => AppL }
   | {
       tag: "withTokenLogic";
       address: string;
@@ -121,6 +113,11 @@ export const withAdminContext = (address: string, next: AppL): AppL => ({
   tag: "withAdminContext",
   address,
   next
+});
+
+export const withNextCallNumber = (handler: (n: number) => AppL): AppL => ({
+  tag: "withNextCallNumber",
+  handler
 });
 
 export const withTokenLogic = (
@@ -152,7 +149,7 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
       const select = (name: string, op: Operation) =>
         button(name, () => send(selectOperation(op)));
       return h("div", { key: randomKey() }, [
-        header("please select an operation"),
+        header("operations:"),
         select("Bind", Operation.Bind),
         select("Clawback", Operation.Clawback)
       ]);
@@ -203,11 +200,24 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
 };
 
 export const run = () => {
+  ethereum.enable();
+  const web3 = new Web3(ethereum);
+
   const state: AppState = {
     node: "start",
     adminAddress: null,
     callNumber: null,
     operation: null
+  };
+
+  const withAdmin = <T>(cb: (admin: any) => T): T | null => {
+    if (state.adminAddress !== null) {
+      const admin = web3.eth
+        .contract(Administration.abi)
+        .at(state.adminAddress);
+      return cb(admin);
+    }
+    return null;
   };
 
   const evaluate = (x: AppL) => {
@@ -218,20 +228,19 @@ export const run = () => {
 
       case "execute":
         // Here we need to make sure we have the call number
-        if (state.adminAddress !== null) {
-          const admin = web3.eth
-            .contract(Administration.abi)
-            .at(state.adminAddress);
+        withAdmin(admin => {
           const c = x.call;
           switch (c.method) {
             case "Bind":
-              admin.bind(callNumber, c.logic, c.front, { gas: 3e5 });
+              admin.bind(state.callNumber, c.logic, c.front, { gas: 3e5 });
               break;
             case "Clawback":
-              admin.clawback(callNumber, c.src, c.dst, c.amount, { gas: 3e5 });
+              admin.clawback(state.callNumber, c.src, c.dst, c.amount, {
+                gas: 3e5
+              });
               break;
           }
-        }
+        });
         break;
 
       case "nav":
@@ -245,6 +254,9 @@ export const run = () => {
 
       case "withAdminContext":
         state.adminAddress = x.address;
+        withAdmin(admin => {
+          state.callNumber = admin.maximumClaimedCallNumber.call() + 1;
+        });
         break;
 
       case "withTokenLogic":
@@ -253,4 +265,19 @@ export const run = () => {
         break;
     }
   };
+
+  document.addEventListener("app-event", (e: AppEvent) => evaluate(e.payload));
+
+  const main = document.getElementById("main");
+
+  if (main !== null) {
+    const proj = createProjector();
+    proj.replace(main, () =>
+      render(state, x => {
+        document.dispatchEvent(new AppEvent(x));
+      })
+    );
+  }
 };
+
+run();
