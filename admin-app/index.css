@@ -1,11 +1,21 @@
 body {
   color: blue;
+  background: lightgrey;
+}
+
+div {
+  margin: 1ex;
+}
+
+section {
+  margin: 2px auto;
 }
 
 .button {
-  border: 1px navy;
+  background: lightblue;
+  border: 1px solid navy;
   cursor: pointer;
-  padding: 1ex;
+  padding: 3px;
 }
 
 .button:hover {
@@ -14,5 +24,11 @@ body {
 }
 
 input {
-  border: 1px navy;
+  background: lightblue;
+  border: 1px solid navy;
+}
+
+.error {
+  background: darkgrey;
+  color: darkred;
 }
