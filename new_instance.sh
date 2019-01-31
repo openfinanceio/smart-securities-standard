@@ -13,7 +13,6 @@ fi
 jq \
   --arg controller $1 \
   '.controller = $controller | .gasReportPath = "extra/gasPrices.json"' \
-  examples/S3-conf.json \
   < extra/conf.stub.json \
   > $workspace/conf.json
 

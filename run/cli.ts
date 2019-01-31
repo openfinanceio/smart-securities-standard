@@ -1,7 +1,6 @@
 // cli tool for S3
 
 import * as assert from "assert";
-import { BigNumber } from "bignumber.js";
 import * as program from "commander";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import * as _ from "lodash";
@@ -11,28 +10,24 @@ import * as winston from "winston";
 import {
   Administration,
   BaseSecurity,
-  IndexedSecurity,
   OfflineTranscriptEntry,
   SimplifiedTokenLogic,
   TokenFront,
   adminSpecRT,
   newResolver,
   baseSecurityRT,
-  indexedSecurityRT
 } from "../src";
 import { txReceipt } from "../src/Web3";
 
 import {
   Config,
   GasReport,
-  OfflineReport,
   configRT,
   onlineReportAbrRT,
   specRT
 } from "./cli/Types";
 import { initS3 } from "./cli/Init";
 import { issueOnline } from "./cli/Online";
-import { offlineStage1, offlineStage2 } from "./cli/Offline";
 import { publishInteractive } from "./cli/Publish";
 import { gweiToWei } from "./cli/Util";
 
@@ -262,182 +257,6 @@ program
         log.info("Audit passed");
       }
     });
-  });
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
-// ISSUE SECURITIES IN OFFLINE MODE //
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
-
-program
-  .command("issue-offline")
-  .option(
-    "-d, --declaration [file]",
-    "path to the declaration file",
-    defaultSpec
-  )
-  .option(
-    "-o, --output [file]",
-    "path to the output file, with the action report",
-    defaultReport
-  )
-  .option("-s, --stage <stage>", "issuance stage", parseInt)
-  .option(
-    "-n, --chain <chainId>",
-    "chain id (defaults to Rinkeby)",
-    parseInt,
-    4
-  )
-  .option("-g, --gasPrice <gasPrice>", "starting gas price", parseInt, 5)
-  .action(env => {
-    const outputFile = env.output;
-
-    // We will never overwrite the output file
-    if (env.stage === 1) {
-      checkOutput(outputFile);
-    }
-
-    try {
-      const spec = specRT
-        .decode(JSON.parse(readFileSync(env.declaration, "utf8")))
-        .getOrElseL(errs => {
-          throw new Error("Invalid specification");
-        });
-
-      const gasPrice = env.gasPrice;
-
-      if (env.stage === 1) {
-        log.info("Stage 1");
-
-        const securities: Array<BaseSecurity> = [];
-        spec.securityPaths.forEach(path =>
-          baseSecurityRT.decode(JSON.parse(readFileSync(path, "utf8"))).fold(
-            errs => {
-              log.warning(`${path} contains an invalid spec`);
-            },
-            security => {
-              // Add the security to the list of specs to process
-              securities.push(security);
-            }
-          )
-        );
-
-        const [nonce, stage1] = offlineStage1(
-          securities,
-          {
-            capTablesAddress: spec.capTables,
-            startingGasPrice: gasPrice,
-            chainId: env.chain
-          },
-          log
-        );
-
-        log.debug(`writing ${outputFile}`);
-
-        writeFileSync(outputFile, JSON.stringify({ nonce, stage1 }), "utf8");
-      } else if (env.stage === 2) {
-        log.info("Stage 2");
-
-        const securities: Array<IndexedSecurity> = [];
-        spec.securityPaths.forEach(path =>
-          indexedSecurityRT.decode(JSON.parse(readFileSync(path, "utf8"))).fold(
-            errs => {
-              log.warning(`${path} contains an invalid spec`);
-            },
-            security => {
-              securities.push(security);
-            }
-          )
-        );
-
-        // We need to read the controller from stdin
-        const controller = Buffer.from(
-          process.env.controller as string,
-          "base64"
-        );
-
-        const { nonce, stage1 } = JSON.parse(readFileSync(outputFile, "utf8"));
-        const stage2 = offlineStage2(
-          securities,
-          {
-            capTablesAddress: spec.capTables,
-            resolver: spec.resolver,
-            startingGasPrice: gasPrice,
-            chainId: env.chain,
-            startingNonce: nonce,
-            controller
-          },
-          log
-        );
-
-        writeFileSync(
-          outputFile,
-          JSON.stringify({
-            stage1,
-            stage2
-          }),
-          "utf8"
-        );
-      } else {
-        log.warning("The only valid stages are '1' & '2'");
-      }
-    } catch (err) {
-      log.error("There was a problem:");
-      log.error(err);
-    }
-  });
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
-// PUBLISH TXS GENERATED IN OFFLINE ISSUANCE MODE //
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
-
-program
-  .command("publish-issuance")
-  .option("-c, --config [file]", "path the configuration file", defaultConfig)
-  .option("-r, --report [file]", "path to the report", defaultReport)
-  .option("-s, --stage <stage>", "the stage of issuance", parseInt)
-  .action(async env => {
-    try {
-      const config: Config = JSON.parse(readFileSync(env.config, "utf8"));
-
-      const web3 = new Web3(
-        new Web3.providers.HttpProvider(
-          `http://${config.net.host}:${config.net.port}`
-        )
-      );
-
-      const report: OfflineReport = JSON.parse(
-        readFileSync(env.report, "utf8")
-      );
-
-      if (env.stage === 1) {
-        for (let [securityName, transaction] of report.stage1) {
-          log.info(`Initializing ${securityName}`);
-
-          const hash = await publishInteractive(transaction, web3, log);
-          const rec = await txReceipt(web3.eth, hash);
-
-          const securityId = new BigNumber(
-            rec.logs[0].data.slice(2),
-            16
-          ).toString();
-
-          log.info(`securityId = ${securityId}`);
-        }
-      } else if (env.stage === 2) {
-        for (let [securityName, transactions] of report.stage2) {
-          log.info(`Finishing ${securityName}`);
-
-          for (let transaction of transactions) {
-            await publishInteractive(transaction, web3, log);
-          }
-        }
-      } else {
-        log.error("Unknown stage");
-      }
-    } catch (err) {
-      log.error("Oops; problem!");
-      log.error(err);
-    }
   });
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //

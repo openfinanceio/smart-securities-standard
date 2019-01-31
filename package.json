@@ -16,7 +16,7 @@
     "install": "scripts/install",
     "make-docs": "typedoc --mode modules --out ./docs",
     "make-example": "tsc && node dist/run/generateExample.js",
-    "start-admin-app": "node bin/admin-server.js -d admin-app", 
+    "start-admin-app": "node bin/admin-server.js -d admin-app",
     "test": "tsc -p tsconfig.test.json && mocha dist/test/*.spec.js src/"
   },
   "devDependencies": {
@@ -30,7 +30,8 @@
     "mocha": "^5.0.1",
     "typedoc": "^0.12.0",
     "typescript": "^3.0.0",
-    "webpack": "latest"
+    "webpack": "latest",
+    "webpack-cli": "latest"
   },
   "dependencies": {
     "@0xproject/web3-wrapper": "^0.6.1",
