@@ -74,20 +74,24 @@ const transfer = async ({
     assert.equal(tr.spender, tr.src, "spender");
     return Promise.resolve([0, tr]) as Promise<[number, TransferRequest]>;
   };
+
   let finalized = false;
   const finalization = async (txHash: string, txr: TransferRequest) => {
     finalized = true;
   };
+
   console.log("Attempting the transfer");
-  const txTransfer = tokenFront.transfer(roles.investor3, new BigNumber(1e2), {
+  const txTransfer = tokenFront.transfer(roles.investor3, 1e2, {
     from: roles.investor1,
-    gas: 5e5
+    gas: 1e6
   });
+
   const recTransfer = await txReceipt(web3.eth, txTransfer);
   assert(success(recTransfer), "transfer should succeed");
+
   const nextTxfrIndex = await S3.handleTransfers(
     middleware,
-    controller,
+    roles.resolver,
     new BigNumber(0),
     web3.eth,
     decision,
@@ -137,7 +141,7 @@ const block = async ({
   assert(success(recTransfer), "transfer should succeed");
   const highestIndex = await S3.handleTransfers(
     middleware,
-    controller,
+    roles.resolver,
     new BigNumber(0),
     web3.eth,
     decision,
@@ -193,7 +197,7 @@ const multiple = async ({
   await txReceipt(web3.eth, txTransfer3);
   const nextTxfrIndex = await S3.handleTransfers(
     middleware,
-    controller,
+    roles.resolver,
     new BigNumber(0),
     web3.eth,
     decision,

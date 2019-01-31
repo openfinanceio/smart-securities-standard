@@ -189,7 +189,7 @@ export async function initToken(
     .new(
       security.securityId.toString(),
       capTables,
-      security.admin,
+      controller,
       security.resolver,
       {
         data: SimplifiedTokenLogic.bytecode,
@@ -317,6 +317,31 @@ export async function initToken(
       gasUsed: receipt.gasUsed,
       data: {
         front
+      }
+    });
+  }
+
+  {
+    const description = "Setting the admin";
+
+    kit.log.debug(description);
+
+    const hash = simplifiedLogic.transferOwnership(security.admin, {
+      from: controller,
+      gas: 5e5,
+      gasPrice
+    });
+
+    const receipt = await txReceipt(kit.eth, hash);
+
+    transcript.push({
+      type: "send",
+      description,
+      hash,
+      gasUsed: receipt.gasUsed,
+      data: {
+        simplifiedLogicAddress,
+        adminAddress: security.admin
       }
     });
   }
