@@ -3,7 +3,5 @@ node_modules
 dist
 *.swp
 docs
-examples/S3-*.json
-examples/security.*.json
 bundle.js*
 bin/

@@ -1,0 +1,6 @@
+{
+  "net": {
+    "host": "localhost",
+    "port": 8545
+  }
+}
