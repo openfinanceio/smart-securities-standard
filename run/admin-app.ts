@@ -3,6 +3,7 @@
 
 import { Administration, TokenFront } from "../src";
 
+import * as ejs from "ethereumjs-util";
 import { VNode, createProjector, h } from "maquette";
 import * as Web3 from "web3";
 
@@ -21,7 +22,7 @@ interface AppEvent extends Event {
   payload: AppL;
 }
 
-export const randomKey = () => Math.random().toString();
+const zeroAddress = ejs.zeroAddress();
 
 // ~~~~~~~~~~~~~~~~~~ //
 // Interface elements //
@@ -102,12 +103,13 @@ export type AppNode =
   | "error";
 
 export type AppState = {
-  node: AppNode;
   adminAddress: string | null;
-  operation: Operation | null;
+  binding: { token: string; engine: string } | null;
+  fieldStates: Map<string, string>;
   lastCall: CallData | null;
   lastError: Error | null;
-  fieldStates: Map<string, string>;
+  node: AppNode;
+  operation: Operation | null;
 };
 
 export type AppL =
@@ -195,6 +197,13 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
     ])
   ]);
 
+  const operationPage = (text: string, input: VNode) =>
+    h("div", {}, [
+      header(text),
+      input,
+      button("back to operations menu", () => send(nav("operations")))
+    ]);
+
   switch (state.node) {
     case "start":
       return start;
@@ -202,21 +211,37 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
     case "operations":
       const select = (name: string, op: Operation) =>
         button(name, () => send(selectOperation(op)));
-      return h("div", {}, [
-        header("operations:"),
-        select("Bind", Operation.Bind),
-        select("Clawback", Operation.Clawback),
-        select("Migrate", Operation.Migrate),
-        select("NewAdmin", Operation.NewAdmin),
-        select("Rotate", Operation.Rotate),
-        select("SetResolver", Operation.SetResolver)
-      ]);
+      return h(
+        "div",
+        {},
+        [
+          header("operations:"),
+          h("div", { key: "binding" }, [
+            state.binding === null
+              ? "admin contract not bound"
+              : `token = ${state.binding.token}; engine = ${
+                  state.binding.engine
+                }`
+          ]),
+          select("Bind", Operation.Bind)
+        ].concat(
+          state.binding === null
+            ? []
+            : [
+                select("Clawback", Operation.Clawback),
+                select("Migrate", Operation.Migrate),
+                select("NewAdmin", Operation.NewAdmin),
+                select("Rotate", Operation.Rotate),
+                select("SetResolver", Operation.SetResolver)
+              ]
+        )
+      );
 
     case "operation":
       switch (state.operation) {
         case Operation.AbortCall:
-          return h("div", {}, [
-            header("Enter the number of the call to abort"),
+          return operationPage(
+            "Enter the number of the call to abort",
             userInput(["call number"], send, ([call]) =>
               operation(callNumber => ({
                 method: "AbortCall",
@@ -224,24 +249,26 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
                 callRef: parseInt(call)
               }))
             )
-          ]);
+          );
 
         case Operation.Bind:
-          return h("div", {}, [
-            header("Please enter the token address"),
-            userInput(["token address"], send, ([address]) =>
-              operation(callNumber => ({
-                method: "Bind",
-                callNumber,
-                logic: address,
-                front: address
-              }))
+          return operationPage(
+            "Please enter the token address",
+            userInput(["token address"], send, ([front]) =>
+              withTokenLogic(front, logic =>
+                operation(callNumber => ({
+                  method: "Bind",
+                  callNumber,
+                  logic,
+                  front
+                }))
+              )
             )
-          ]);
+          );
 
         case Operation.Clawback:
-          return h("div", {}, [
-            header("please enter the following"),
+          return operationPage(
+            "please enter the following",
             userInput(
               ["source", "destination", "amount"],
               send,
@@ -254,11 +281,11 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
                   amount: parseInt(amount)
                 }))
             )
-          ]);
+          );
 
         case Operation.Migrate:
-          return h("div", {}, [
-            header("Migrate to new token logic"),
+          return operationPage(
+            "Migrate to new token logic",
             userInput(["new logic"], send, ([newLogic]) =>
               operation(callNumber => ({
                 method: "Migrate",
@@ -266,11 +293,11 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
                 newLogic
               }))
             )
-          ]);
+          );
 
         case Operation.NewAdmin:
-          return h("div", {}, [
-            header("Enter the new administrator contract"),
+          return operationPage(
+            "Enter the new administrator contract",
             userInput(["new admin"], send, ([newAdmin]) =>
               operation(callNumber => ({
                 method: "NewAdmin",
@@ -278,11 +305,11 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
                 newAdmin
               }))
             )
-          ]);
+          );
 
         case Operation.Rotate:
-          return h("div", {}, [
-            header("Enter the sig position and new key"),
+          return operationPage(
+            "Enter the sig position and new key",
             userInput(
               ["sig position", "new cosigner"],
               send,
@@ -294,11 +321,11 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
                   newSigner
                 }))
             )
-          ]);
+          );
 
         case Operation.SetResolver:
-          return h("div", {}, [
-            header("Enter the new resolver"),
+          return operationPage(
+            "Enter the new resolver",
             userInput(["new resolver"], send, ([resolver]) =>
               operation(callNumber => ({
                 method: "SetResolver",
@@ -306,7 +333,7 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
                 resolver
               }))
             )
-          ]);
+          );
 
         default:
           return start;
@@ -340,12 +367,13 @@ export const run = () => {
   const proj = createProjector();
 
   const state: AppState = {
-    node: "start",
     adminAddress: null,
-    operation: null,
+    binding: null,
+    fieldStates: new Map(),
     lastCall: null,
     lastError: null,
-    fieldStates: new Map()
+    node: "start",
+    operation: null
   };
 
   const withAdmin = <T>(cb: (admin: any) => T): T | null => {
@@ -429,7 +457,23 @@ export const run = () => {
 
       case "withAdminContext":
         state.adminAddress = x.address;
-        evaluate(x.next);
+        withAdmin(admin =>
+          admin.targetFront.call((err: Error | null, front: string) => {
+            if (err !== null) {
+              throw err;
+            }
+            admin.targetLogic.call((err: Error | null, logic: string) => {
+              if (err !== null) {
+                throw err;
+              }
+              if (front !== zeroAddress && logic !== zeroAddress) {
+                state.binding = { token: front, engine: logic };
+              }
+              evaluate(x.next);
+              proj.scheduleRender();
+            });
+          })
+        );
         break;
 
       case "withFreshCallNumber":
