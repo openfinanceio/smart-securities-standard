@@ -83,13 +83,16 @@ export async function initCapTable(
 ): Promise<[SecurityId, Transcript]> {
   const transcript: Transcript = [];
 
+  kit.log.debug(`Parameters: capTables = ${capTables}`);
+
   const CapTables = kit.eth.contract(CapTablesArtifact.abi).at(capTables);
 
   const supply = totalSupply(security);
 
   kit.log.debug("Deploying the cap table");
+  kit.log.debug(`Parameters: supply = ${supply}; controller = ${controller}`);
 
-  const txInit = CapTables.initialize(supply, controller, {
+  const txInit = CapTables.initialize(supply.toString(), controller, {
     from: controller,
     gas: 5e5,
     gasPrice
@@ -123,7 +126,7 @@ export async function initCapTable(
         kit.log.info(description);
 
         const tx = CapTables.transfer(
-          index,
+          index.toString(),
           controller,
           investor.address,
           investor.amount,
@@ -183,12 +186,18 @@ export async function initToken(
 
   const txSimplifiedLogic = kit.eth
     .contract(SimplifiedTokenLogic.abi)
-    .new(security.securityId, capTables, security.admin, security.resolver, {
-      data: SimplifiedTokenLogic.bytecode,
-      from: controller,
-      gas: 1.5e6,
-      gasPrice
-    });
+    .new(
+      security.securityId.toString(),
+      capTables,
+      security.admin,
+      security.resolver,
+      {
+        data: SimplifiedTokenLogic.bytecode,
+        from: controller,
+        gas: 1.5e6,
+        gasPrice
+      }
+    );
 
   const recSimplifiedLogic = await txReceipt(
     kit.eth,

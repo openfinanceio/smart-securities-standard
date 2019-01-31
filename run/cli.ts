@@ -100,7 +100,11 @@ program
     checkOutput(env.output);
 
     // Let's read in the configuration
-    const config: Config = JSON.parse(readFileSync(env.config, "utf8"));
+    const config: Config = configRT
+      .decode(JSON.parse(readFileSync(env.config, "utf8")))
+      .getOrElseL(errs => {
+        throw new Error("Invalid config.");
+      });
 
     // ... and the program that we're supposed to execute
     const spec = specRT
@@ -515,7 +519,7 @@ program
   .command("new-administration")
   .option("-c, --config [file]", "configuration file", defaultConfig)
   .option("-s, --spec [file]", "specification file", defaultAdminSpec)
-  .option("-t, --transcript [file]", "transcript file", defaultReport)
+  .option("-o, --output [file]", "transcript file", defaultReport)
   .option("-g, --gasPrice [gweiPrice]", "gas price to use in gwei", 5)
   .action(env => {
     configRT.decode(JSON.parse(readFileSync(env.config, "utf8"))).fold(
@@ -550,11 +554,7 @@ program
 
             log.info(`Administration deployed to: ${adminAddress}`);
 
-            writeFileSync(
-              env.transcript,
-              JSON.stringify({ adminAddress }),
-              "utf8"
-            );
+            writeFileSync(env.output, JSON.stringify({ adminAddress }), "utf8");
           }
         );
       }
