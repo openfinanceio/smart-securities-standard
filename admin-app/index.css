@@ -15,6 +15,7 @@ section {
   background: lightblue;
   border: 1px solid navy;
   cursor: pointer;
+  margin-right: 1ex;
   padding: 3px;
 }
 

@@ -28,7 +28,6 @@ contract Administration {
         Clawback,
         Migrate,
         NewAdmin,
-        NewLogic,
         Rotate,
         Bind
     }

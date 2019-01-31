@@ -13,7 +13,6 @@ export enum Operation {
   Clawback,
   Migrate,
   NewAdmin,
-  NewLogic,
   Rotate,
   Bind
 }
@@ -74,6 +73,8 @@ export const userInput = (
 // Application
 
 export type CallData =
+  | { method: "AbortCall"; callNumber: number; callRef: number }
+  | { method: "Bind"; callNumber: number; logic: string; front: string }
   | {
       method: "Clawback";
       callNumber: number;
@@ -81,7 +82,10 @@ export type CallData =
       dst: string;
       amount: number;
     }
-  | { method: "Bind"; callNumber: number; logic: string; front: string };
+  | { method: "Migrate"; callNumber: number; newLogic: string }
+  | { method: "NewAdmin"; callNumber: number; newAdmin: string }
+  | { method: "Rotate"; callNumber: number; sig: 0 | 1 | 2; newSigner: string }
+  | { method: "SetResolver"; callNumber: number; resolver: string };
 
 export type CallHandler = (address: string, callData: CallData) => void;
 
@@ -169,6 +173,9 @@ export const executeCall = (call: CallData): AppL => ({ tag: "execute", call });
 
 export type Evaluator<A> = (prog: AppL) => A;
 
+export const operation = (call: (n: number) => CallData): AppL =>
+  withFreshCallNumber(n => block([executeCall(call(n)), nav("summary")]));
+
 export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
   const start = h("div", {}, [
     header("welcome to S3 administration"),
@@ -198,28 +205,37 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
       return h("div", {}, [
         header("operations:"),
         select("Bind", Operation.Bind),
-        select("Clawback", Operation.Clawback)
+        select("Clawback", Operation.Clawback),
+        select("Migrate", Operation.Migrate),
+        select("NewAdmin", Operation.NewAdmin),
+        select("Rotate", Operation.Rotate),
+        select("SetResolver", Operation.SetResolver)
       ]);
 
     case "operation":
       switch (state.operation) {
+        case Operation.AbortCall:
+          return h("div", {}, [
+            header("Enter the number of the call to abort"),
+            userInput(["call number"], send, ([call]) =>
+              operation(callNumber => ({
+                method: "AbortCall",
+                callNumber,
+                callRef: parseInt(call)
+              }))
+            )
+          ]);
+
         case Operation.Bind:
           return h("div", {}, [
-            header("please enter the token address"),
+            header("Please enter the token address"),
             userInput(["token address"], send, ([address]) =>
-              withTokenLogic(address, logic =>
-                withFreshCallNumber(callNumber =>
-                  block([
-                    executeCall({
-                      method: "Bind",
-                      callNumber,
-                      logic,
-                      front: address
-                    }),
-                    nav("summary")
-                  ])
-                )
-              )
+              operation(callNumber => ({
+                method: "Bind",
+                callNumber,
+                logic: address,
+                front: address
+              }))
             )
           ]);
 
@@ -230,18 +246,65 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
               ["source", "destination", "amount"],
               send,
               ([src, dst, amount]) =>
-                withFreshCallNumber(callNumber =>
-                  block([
-                    executeCall({
-                      method: "Clawback",
-                      callNumber,
-                      src,
-                      dst,
-                      amount: parseInt(amount)
-                    }),
-                    nav("summary")
-                  ])
-                )
+                operation(callNumber => ({
+                  method: "Clawback",
+                  callNumber,
+                  src,
+                  dst,
+                  amount: parseInt(amount)
+                }))
+            )
+          ]);
+
+        case Operation.Migrate:
+          return h("div", {}, [
+            header("Migrate to new token logic"),
+            userInput(["new logic"], send, ([newLogic]) =>
+              operation(callNumber => ({
+                method: "Migrate",
+                callNumber,
+                newLogic
+              }))
+            )
+          ]);
+
+        case Operation.NewAdmin:
+          return h("div", {}, [
+            header("Enter the new administrator contract"),
+            userInput(["new admin"], send, ([newAdmin]) =>
+              operation(callNumber => ({
+                method: "NewAdmin",
+                callNumber,
+                newAdmin
+              }))
+            )
+          ]);
+
+        case Operation.Rotate:
+          return h("div", {}, [
+            header("Enter the sig position and new key"),
+            userInput(
+              ["sig position", "new cosigner"],
+              send,
+              ([sigPos, newSigner]) =>
+                operation(callNumber => ({
+                  method: "Rotate",
+                  callNumber,
+                  sig: parseInt(sigPos) as 0 | 1 | 2,
+                  newSigner
+                }))
+            )
+          ]);
+
+        case Operation.SetResolver:
+          return h("div", {}, [
+            header("Enter the new resolver"),
+            userInput(["new resolver"], send, ([resolver]) =>
+              operation(callNumber => ({
+                method: "SetResolver",
+                callNumber,
+                resolver
+              }))
             )
           ]);
 
