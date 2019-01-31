@@ -7,6 +7,12 @@ import * as ejs from "ethereumjs-util";
 import { VNode, createProjector, h } from "maquette";
 import * as Web3 from "web3";
 
+const zeroAddress = ejs.zeroAddress();
+
+// ~~~~~ //
+// Types //
+// ~~~~~ //
+
 // Possible operations
 export enum Operation {
   AbortCall,
@@ -22,7 +28,60 @@ interface AppEvent extends Event {
   payload: AppL;
 }
 
-const zeroAddress = ejs.zeroAddress();
+export type CallData =
+  | { method: "AbortCall"; callNumber: number; callRef: number }
+  | { method: "Bind"; callNumber: number; logic: string; front: string }
+  | {
+      method: "Clawback";
+      callNumber: number;
+      src: string;
+      dst: string;
+      amount: number;
+    }
+  | { method: "Migrate"; callNumber: number; newLogic: string }
+  | { method: "NewAdmin"; callNumber: number; newAdmin: string }
+  | { method: "Rotate"; callNumber: number; sig: 0 | 1 | 2; newSigner: string }
+  | { method: "SetResolver"; callNumber: number; resolver: string };
+
+export type CallHandler = (address: string, callData: CallData) => void;
+
+export type Admin = {
+  bind: (tokenLogic: string, tokenFront: string) => void;
+  clawback: (src: string, dst: string, amount: number) => void;
+};
+
+export type AppNode =
+  | "start"
+  | "operations"
+  | "operation"
+  | "summary"
+  | "error";
+
+export type AppState = {
+  adminAddress: string | null;
+  binding: { token: string; engine: string } | null;
+  fieldStates: Map<string, string>;
+  lastCall: CallData | null;
+  lastError: Error | null;
+  node: AppNode;
+  operation: Operation | null;
+};
+
+export type AppL =
+  | { tag: "block"; xs: AppL[] }
+  | { tag: "execute"; call: CallData }
+  | { tag: "nav"; node: AppNode }
+  | { tag: "newFieldState"; location: string; value: string }
+  | { tag: "selectOperation"; operation: Operation }
+  | { tag: "reset" }
+  | { tag: "withAdminContext"; address: string; next: AppL }
+  | { tag: "withFreshCallNumber"; handler: (n: number) => AppL }
+  | { tag: "withInput"; location: string; handler: (value: string) => AppL }
+  | {
+      tag: "withTokenLogic";
+      address: string;
+      handler: (logic: string) => AppL;
+    };
 
 // ~~~~~~~~~~~~~~~~~~ //
 // Interface elements //
@@ -71,75 +130,25 @@ export const userInput = (
   return h("div", { key: inputs.join("|") }, nodes);
 };
 
-// Application
-
-export type CallData =
-  | { method: "AbortCall"; callNumber: number; callRef: number }
-  | { method: "Bind"; callNumber: number; logic: string; front: string }
-  | {
-      method: "Clawback";
-      callNumber: number;
-      src: string;
-      dst: string;
-      amount: number;
-    }
-  | { method: "Migrate"; callNumber: number; newLogic: string }
-  | { method: "NewAdmin"; callNumber: number; newAdmin: string }
-  | { method: "Rotate"; callNumber: number; sig: 0 | 1 | 2; newSigner: string }
-  | { method: "SetResolver"; callNumber: number; resolver: string };
-
-export type CallHandler = (address: string, callData: CallData) => void;
-
-export type Admin = {
-  bind: (tokenLogic: string, tokenFront: string) => void;
-  clawback: (src: string, dst: string, amount: number) => void;
-};
-
-export type AppNode =
-  | "start"
-  | "operations"
-  | "operation"
-  | "summary"
-  | "error";
-
-export type AppState = {
-  adminAddress: string | null;
-  binding: { token: string; engine: string } | null;
-  fieldStates: Map<string, string>;
-  lastCall: CallData | null;
-  lastError: Error | null;
-  node: AppNode;
-  operation: Operation | null;
-};
-
-export type AppL =
-  | { tag: "block"; xs: AppL[] }
-  | { tag: "execute"; call: CallData }
-  | { tag: "nav"; node: AppNode }
-  | { tag: "selectOperation"; operation: Operation }
-  | { tag: "newFieldState"; location: string; value: string }
-  | { tag: "withAdminContext"; address: string; next: AppL }
-  | { tag: "withFreshCallNumber"; handler: (n: number) => AppL }
-  | { tag: "withInput"; location: string; handler: (value: string) => AppL }
-  | {
-      tag: "withTokenLogic";
-      address: string;
-      handler: (logic: string) => AppL;
-    };
+// ~~~~~~~ //
+// App DSL //
+// ~~~~~~~ //
 
 export const block = (xs: AppL[]): AppL => ({ tag: "block", xs });
 
 export const nav = (node: AppNode): AppL => ({ tag: "nav", node });
 
-export const selectOperation = (operation: Operation): AppL => ({
-  tag: "selectOperation",
-  operation
-});
-
 export const newFieldState = (location: string, value: string): AppL => ({
   tag: "newFieldState",
   location,
   value
+});
+
+export const reset: AppL = { tag: "reset" };
+
+export const selectOperation = (operation: Operation): AppL => ({
+  tag: "selectOperation",
+  operation
 });
 
 export const withAdminContext = (address: string, next: AppL): AppL => ({
@@ -173,10 +182,12 @@ export const withTokenLogic = (
 
 export const executeCall = (call: CallData): AppL => ({ tag: "execute", call });
 
-export type Evaluator<A> = (prog: AppL) => A;
-
 export const operation = (call: (n: number) => CallData): AppL =>
   withFreshCallNumber(n => block([executeCall(call(n)), nav("summary")]));
+
+// ~~~~~~~~~ //
+// Rendering //
+// ~~~~~~~~~ //
 
 export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
   const start = h("div", {}, [
@@ -345,7 +356,8 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
         header("Call summary"),
         state.lastCall === null
           ? "no call to display"
-          : h("pre", {}, [JSON.stringify(summary, undefined, 2)])
+          : h("pre", {}, [JSON.stringify(summary, undefined, 2)]),
+        button("reset", () => send(reset))
       ]);
 
     case "error":
@@ -358,23 +370,29 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
   }
 };
 
+// ~~~~~~~~ //
+// App body //
+// ~~~~~~~~ //
+
+const emptyState = (): AppState => ({
+  adminAddress: null,
+  binding: null,
+  fieldStates: new Map(),
+  lastCall: null,
+  lastError: null,
+  node: "start",
+  operation: null
+});
+
 export const run = () => {
   console.log("starting app..");
+
+  const state = emptyState();
 
   (window as any).ethereum.enable();
   const web3 = new Web3((window as any).ethereum);
 
   const proj = createProjector();
-
-  const state: AppState = {
-    adminAddress: null,
-    binding: null,
-    fieldStates: new Map(),
-    lastCall: null,
-    lastError: null,
-    node: "start",
-    operation: null
-  };
 
   const withAdmin = <T>(cb: (admin: any) => T): T | null => {
     if (state.adminAddress !== null) {
@@ -392,7 +410,8 @@ export const run = () => {
 
   const trigger = (err: Error | null) => {
     if (err !== null) {
-      throw err;
+      state.lastError = err;
+      state.node = "error";
     }
     proj.scheduleRender();
   };
@@ -448,6 +467,10 @@ export const run = () => {
 
       case "newFieldState":
         state.fieldStates.set(x.location, x.value);
+        break;
+
+      case "reset":
+        state = emptyState();
         break;
 
       case "selectOperation":
