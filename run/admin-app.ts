@@ -185,6 +185,14 @@ export const executeCall = (call: CallData): AppL => ({ tag: "execute", call });
 export const operation = (call: (n: number) => CallData): AppL =>
   withFreshCallNumber(n => block([executeCall(call(n)), nav("summary")]));
 
+export const handleCallSummary = (
+  call: CallData & { adminAddress: string }
+): AppL =>
+  withAdminContext(
+    call.adminAddress,
+    block([executeCall(call), nav("summary")])
+  );
+
 // ~~~~~~~~~ //
 // Rendering //
 // ~~~~~~~~~ //
@@ -200,10 +208,7 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
     section("cosign operation", [
       userInput(["operation blob"], send, ([callBlob]) => {
         const call = JSON.parse(callBlob);
-        return withAdminContext(
-          call.adminAddress,
-          block([executeCall(call), nav("summary")])
-        );
+        return handleCallSummary(call);
       })
     ])
   ]);
@@ -352,11 +357,19 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
 
     case "summary":
       const summary = { adminAddress: state.adminAddress, ...state.lastCall };
+      const href = `http://${window.location.host}#${encodeURI(
+        JSON.stringify(summary)
+      )}`;
       return h("div", {}, [
         header("Call summary"),
         state.lastCall === null
           ? "no call to display"
-          : h("pre", {}, [JSON.stringify(summary, undefined, 2)]),
+          : h("div", {}, [
+              h("p", { key: "call display" }, [
+                h("pre", {}, [JSON.stringify(summary, undefined, 2)])
+              ]),
+              h("p", { key: "call link" }, [h("a", { href }, ["call uri"])])
+            ]),
         button("reset", () => send(reset))
       ]);
 
@@ -386,6 +399,14 @@ const emptyState = (): AppState => ({
 
 export const run = () => {
   console.log("starting app..");
+
+  const parseUri = () => {
+    try {
+      return JSON.parse(decodeURI(window.location.hash.slice(1)));
+    } catch (err) {
+      return null;
+    }
+  };
 
   const state = emptyState();
 
@@ -594,6 +615,13 @@ export const run = () => {
 
     console.log(state);
   });
+
+  const incomingBlob = parseUri();
+  if (incomingBlob !== null) {
+    const ev = new Event("app-event") as AppEvent;
+    ev.payload = handleCallSummary(incomingBlob);
+    document.dispatchEvent(ev);
+  }
 
   const main = document.getElementById("main");
 
