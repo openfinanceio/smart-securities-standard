@@ -435,6 +435,15 @@ export const run = () => {
           console.log(admin.address);
           console.log(c);
           switch (c.method) {
+            case "AbortCall":
+              admin.abortCall(
+                c.callNumber,
+                c.callRef,
+                { gas: 3e5, from: web3.eth.accounts[0] },
+                trigger
+              );
+              break;
+
             case "Bind":
               admin.bind(
                 c.callNumber,
@@ -444,6 +453,7 @@ export const run = () => {
                 trigger
               );
               break;
+
             case "Clawback":
               admin.clawback(
                 c.callNumber,
@@ -454,6 +464,43 @@ export const run = () => {
                   gas: 3e5,
                   from: web3.eth.accounts[0]
                 },
+                trigger
+              );
+              break;
+
+            case "Migrate":
+              admin.migrate(
+                c.callNumber,
+                c.newLogic,
+                { gas: 3e5, from: web3.eth.accounts[0] },
+                trigger
+              );
+              break;
+
+            case "NewAdmin":
+              admin.newAdmin(
+                c.callNumber,
+                c.newAdmin,
+                { gas: 3e5, from: web3.eth.accounts[0] },
+                trigger
+              );
+              break;
+
+            case "Rotate":
+              admin.rotate(
+                c.callNumber,
+                c.sig,
+                c.newSigner,
+                { gas: 3e5, from: web3.eth.accounts[0] },
+                trigger
+              );
+              break;
+
+            case "SetResolver":
+              admin.setResolver(
+                c.callNumber,
+                c.resolver,
+                { gas: 3e5, from: web3.eth.accounts[0] },
                 trigger
               );
               break;
@@ -470,7 +517,7 @@ export const run = () => {
         break;
 
       case "reset":
-        state = emptyState();
+        Object.assign(state, emptyState());
         break;
 
       case "selectOperation":

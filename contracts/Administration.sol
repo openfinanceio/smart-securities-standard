@@ -145,6 +145,30 @@ contract Administration {
     }
 
     /**
+     * Abort the named call if it is incomplete
+     */
+    function abortCall(uint256 _callNumber, uint256 _callRef) public {
+        setup(
+            _callNumber, 
+            Operation.AbortCall, 
+            keccak256(abi.encodePacked(_callRef))
+        );
+
+        addSig(_callNumber);
+
+        if (
+            thresholdMet(_callNumber) &&
+            methodCalls[_callRef].status == CallStatus.Open
+           ) 
+        {
+
+            complete(_callRef);
+            complete(_callNumber);
+
+        }
+    }
+
+    /**
      * Bind the contract to an S3 token front - token logic pair.
      */
     function bind(uint256 _callNumber, SimplifiedLogic _tokenLogic, TokenFront _tokenFront) public {
