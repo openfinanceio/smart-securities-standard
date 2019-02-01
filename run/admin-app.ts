@@ -532,6 +532,7 @@ export const run = () => {
         break;
 
       case "reset":
+        window.location.hash = "";
         Object.assign(state, emptyState());
         break;
 
