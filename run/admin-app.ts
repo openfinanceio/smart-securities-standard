@@ -357,9 +357,10 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
 
     case "summary":
       const summary = { adminAddress: state.adminAddress, ...state.lastCall };
-      const href = `http://${window.location.host}#${encodeURI(
+      const href = `http://${window.location.host}/#?callData=${encodeURI(
         JSON.stringify(summary)
       )}`;
+
       return h("div", {}, [
         header("Call summary"),
         state.lastCall === null
@@ -370,6 +371,7 @@ export const render = (state: AppState, send: (prog: AppL) => void): VNode => {
               ]),
               h("p", { key: "call link" }, [h("a", { href }, ["call uri"])])
             ]),
+
         button("reset", () => send(reset))
       ]);
 
@@ -399,14 +401,6 @@ const emptyState = (): AppState => ({
 
 export const run = () => {
   console.log("starting app..");
-
-  const parseUri = () => {
-    try {
-      return JSON.parse(decodeURI(window.location.hash.slice(1)));
-    } catch (err) {
-      return null;
-    }
-  };
 
   const state = emptyState();
 
@@ -548,6 +542,7 @@ export const run = () => {
 
       case "withAdminContext":
         state.adminAddress = x.address;
+        window.location.hash = "#?adminAddress=" + state.adminAddress;
         withAdmin(admin =>
           admin.targetFront.call((err: Error | null, front: string) => {
             if (err !== null) {
@@ -616,11 +611,25 @@ export const run = () => {
     console.log(state);
   });
 
-  const incomingBlob = parseUri();
-  if (incomingBlob !== null) {
-    const ev = new Event("app-event") as AppEvent;
-    ev.payload = handleCallSummary(incomingBlob);
-    document.dispatchEvent(ev);
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  try {
+    const callData = params.get("callData");
+    const adminAddress = params.get("adminAddress");
+    if (callData !== null) {
+      const ev = new Event("app-event") as AppEvent;
+
+      ev.payload = handleCallSummary(JSON.parse(decodeURI(callData)));
+
+      document.dispatchEvent(ev);
+    } else if (adminAddress !== null) {
+      const ev = new Event("app-event") as AppEvent;
+
+      ev.payload = withAdminContext(adminAddress, nav("operations"));
+
+      document.dispatchEvent(ev);
+    }
+  } catch (err) {
+    console.log("unable to decode query parameters");
   }
 
   const main = document.getElementById("main");
