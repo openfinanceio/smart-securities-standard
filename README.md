@@ -21,7 +21,8 @@ Contributing
 --
 
 If you would like to contribute, please see `contributing.md` before you begin.
-Then, take a look at the setup instructions below.
+Then, take a look at the [setup instructions](#setting-up-for-s3-development)
+below.
 
 Architecture
 --
@@ -170,19 +171,37 @@ $ npm run compile
 $ npm run cli -- --help # see cli options
 ```
 
+#### Running Tests
+
 The tests expect to find [`ganache-cli`][ganache] listening at
-`localhost:8545`.  Once `ganache-cli` has been started:
+`localhost:8545`.  Ganache should be started in deterministic mode
+with at least 15 addresses.
+
+You can start ganache in one terminal like so:
+```
+ganache-cli -d -a 15
+```
+
+and in another terminal, run the tests like so:
+
 ```
 $ # run the test cases
 $ npm test -- -t 30000
 ```
 
-There is a script `new_instance.sh` that can be used to quickly get a
+#### Deploying a Functioning Instance to Testnet
+
+There is a script, `new_instance.sh`, that can be used to quickly get a
 deployment of S3 up on the test network.  Put 5 addresses that you can sign in 
 a file, one per line, then invoke `xargs ./new_instance.sh < $ADDRESS_FILE`.
 This will generate example configuration, declarations, and outputs in a
 temporary folder.
 
+If you're using ganache, you should use five of the addresses created on start.
+The addresses and their associated private keys are neatly written to screen,
+so just pick five and make sure you hold onto the private keys.
+
 [solc]: https://github.com/ethereum/solidity
 [ganache]: https://github.com/trufflesuite/ganache-cli
 [jq]: https://stedolan.github.io/jq/
+
