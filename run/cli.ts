@@ -318,7 +318,7 @@ program
       );
 
       const entry: OfflineTranscriptEntry = JSON.parse(
-        readFileSync(env.trascript, "utf8")
+        readFileSync(env.transcript, "utf8")
       );
 
       await publishInteractive(entry, web3, log);
@@ -341,6 +341,7 @@ program
   .option("-o, --output [file]", "transcript file", defaultReport)
   .option("-g, --gasPrice [gweiPrice]", "gas price to use in gwei", 5)
   .action(env => {
+    log.info("Running 'new-administration'");
     configRT.decode(JSON.parse(readFileSync(env.config, "utf8"))).fold(
       errs => {
         log.error("Malformed configuration");
@@ -359,14 +360,17 @@ program
           async spec => {
             checkOutput(env.transcript);
 
+            log.info("All configurations appear correct. Submitting transaction.");
             const { transactionHash } = web3.eth
               .contract(Administration.abi)
               .new(spec.cosignerA, spec.cosignerB, spec.cosignerC, {
                 data: Administration.bytecode,
                 from: config.controller,
                 gas: 1.5e6,
-                gasPrice: env.gasPrice
+                gasPrice: web3.toWei(env.gasPrice, "gwei")
               });
+
+            log.info(`Tx ${transactionHash} submitted. Awaiting receipt....`);
 
             const adminAddress = (await txReceipt(web3.eth, transactionHash))
               .contractAddress;
