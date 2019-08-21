@@ -2,9 +2,8 @@ import { SimplifiedTokenLogic } from "../Contracts";
 import {
   Address,
   Transfer,
-  TransferRequest,
   FullTransferRequest,
-  TransferStatus
+  TransferStatus,
 } from "../Types";
 import { BigNumber } from "bignumber.js";
 import * as Web3 from "web3";
@@ -85,7 +84,7 @@ export const activeRequests = (
   start: number,
   web3: Web3
 ) => {
-  const active: TransferRequest[] = [];
+  const active: FullTransferRequest[] = [];
   let gap = 0;
   let cursor = start;
 
