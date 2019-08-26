@@ -1,0 +1,12 @@
+admin-app
+bin
+extra
+githooks
+new_instance.sh
+run
+src
+scripts
+test
+tsconfig*
+webpack*
+.gitmodules
