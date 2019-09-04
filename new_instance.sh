@@ -60,7 +60,7 @@ jq \
   '.admin = $admin | .resolver = $resolver | .investors = []' \
   < extra/security.stub.json |
   jq --arg investorA $cosA \
-    '.investors[0].address = $investorA | .investors[0].amount = "100000"' |
+    '.investors[0].address = $investorA | .investors[0].amount = "10000000000"' |
   jq --arg investorB $cosB \
     '.investors[1].address = $investorB | .investors[1].amount = "10000"' \
     > $workspace/security.json

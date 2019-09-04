@@ -1,7 +1,7 @@
 {
    "metadata" : {
-      "symbol" : "S1",
-      "name" : "Security1",
+      "symbol" : "OFNTXG",
+      "name" : "OFN Token (Ganache)",
       "decimals" : 4
    }
 }
