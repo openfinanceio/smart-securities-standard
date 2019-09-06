@@ -156,7 +156,7 @@ Please see `contributing.md`.
 
 In order to develop S3, you'll need to have some programs installed:
 
-* [`solc`][solc] 
+* [`solc`][solc] (usually via apt-get on Debian-based Linux)
 * [`jq`][jq]
 * `typescript`, which can be installed with `npm install -g typescript` (or
   through your system package manager)
