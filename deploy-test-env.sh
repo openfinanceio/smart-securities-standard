@@ -9,7 +9,7 @@ ganachepid="$!"
 trap "kill $ganachepid" EXIT
 
 n=0
-while ! netstat -tl | grep -q 8545 && [ "$n" -lt 15 ]; do
+while ! netstat -tl | grep -q 8545 && [ "$n" -lt 6 ]; do
   n=$((n+1))
   sleep 1
 done
