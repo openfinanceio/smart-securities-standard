@@ -9,12 +9,12 @@ ganachepid="$!"
 trap "kill $ganachepid" EXIT
 
 n=0
-while ! netstat -tl | grep -q 8545 && [ "$n" -lt 6 ]; do
+while ! lsof -i -P -n | grep -q ":8545" && [ "$n" -lt 10 ]; do
   n=$((n+1))
   sleep 1
 done
 
-if ! netstat -tl | grep -q 8545; then
+if ! lsof -i -P -n | grep -q ":8545"; then
   >&2 echo "Ganache doesn't seem to be starting up.... Try again."
   exit 1
 fi
