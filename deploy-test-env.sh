@@ -6,7 +6,7 @@
 ganache-cli -a 15 -d &
 ganachepid="$!"
 
-trap "kill $ganachepid" EXIT
+trap "kill -15 $ganachepid &>/dev/null" EXIT
 
 n=0
 while ! lsof -i -P -n | grep -q ":8545" && [ "$n" -lt 10 ]; do
