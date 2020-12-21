@@ -3,7 +3,7 @@
 # This is a convenience script that starts ganache, then uses the default addresses
 # deterministically created by `ganache-cli -d` to instantiate a test environment.
 
-ganache-cli -a 15 -d &
+npx ganache-cli -a 15 -d &
 ganachepid="$!"
 
 trap "kill -15 $ganachepid &>/dev/null" EXIT
