@@ -22,29 +22,29 @@
     "@0xproject/typescript-typings": "^1.0.0",
     "@types/ethereumjs-tx": "^1.0.0",
     "@types/ethereumjs-util": "^5.2.0",
-    "@types/express": "^4.17.3",
-    "@types/lodash": "^4.14.149",
+    "@types/express": "^4.17.11",
+    "@types/lodash": "^4.14.168",
     "@types/mocha": "^2.2.48",
-    "@types/node": "^8.10.59",
+    "@types/node": "^8.10.66",
     "ethereum-types": "^0.0.2",
-    "ganache-cli": "^6.12.1",
+    "ganache-cli": "^6.12.2",
     "mocha": "^5.2.0",
     "typedoc": "^0.12.0",
-    "typescript": "^3.8.3",
-    "webpack": "^4.42.1",
-    "webpack-cli": "^3.3.11"
+    "typescript": "^3.9.9",
+    "webpack": "^4.46.0",
+    "webpack-cli": "^3.3.12"
   },
   "dependencies": {
     "@0xproject/web3-wrapper": "^0.6.1",
     "bignumber.js": "^7.2.1",
     "commander": "^2.20.3",
     "ethereumjs-tx": "^1.3.7",
-    "ethereumjs-util": "^5.2.0",
+    "ethereumjs-util": "^5.2.1",
     "express": "^4.17.1",
     "io-ts": "1.5.1",
-    "lodash": "^4.17.15",
-    "maquette": "^3.3.6",
+    "lodash": "^4.17.21",
+    "maquette": "^3.4.1",
     "web3": "0.20.7",
-    "winston": "^3.2.1"
+    "winston": "^3.3.3"
   }
 }
